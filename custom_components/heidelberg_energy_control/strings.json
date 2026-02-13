@@ -1,0 +1,61 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "name": "Name",
+          "host": "Host",
+          "port": "Port",
+          "device_id": "Device ID"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to the wallbox",
+      "invalid_auth": "Wallbox connected but did not respond (check Slave ID)",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This wallbox is already configured"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "charging_state": { "name": "Charging state" },
+      "charging_power": { "name": "Charging power" },
+      "total_energy": { "name": "Total energy" },
+      "session_energy": { "name": "Session energy" },
+      "energy_since_power_on": { "name": "Energy since power on" },
+      "phases_active": { "name": "Active Phases" },
+      "current": { "name": "Charging Current" },
+      "current_l1": { "name": "Current L1" },
+      "current_l2": { "name": "Current L2" },
+      "current_l3": { "name": "Current L3" },
+      "voltage_l1": { "name": "Voltage L1" },
+      "voltage_l2": { "name": "Voltage L2" },
+      "voltage_l3": { "name": "Voltage L3" },
+      "pcb_temperature": { "name": "Housing temperature" },
+      "max_current_command": { "name": "Hardware Current Limit" }
+    },
+    "binary_sensor": {
+      "external_lock_state": {
+        "name": "External Lock",
+        "state": {"on": "Locked", "off": "Unlocked"}
+      },
+      "is_plugged": {
+        "name": "Vehicle connected",
+        "state": {"on": "Connected", "off": "Disconnected"}
+      },
+      "is_charging": {
+        "name": "Vehicle charging",
+        "state": {"on": "Charging", "off": "Standby"}
+      }
+    },
+    "number": {
+      "max_current_command": { "name": "Target Charging Current" }
+    },
+    "switch": {
+      "virtual_enable": { "name": "Charge Enable" }
+    }
+  }
+}

@@ -1,15 +1,15 @@
 {
   "domain": "heidelberg_energy_control",
   "name": "Heidelberg Energy Control",
-  "version": "0.9.0",
   "codeowners": [
     "@Schrolli91"
   ],
-  "documentation": "https://github.com/Schrolli91/heidelberg_energy_control",
-  "issue_tracker": "https://github.com/Schrolli91/heidelberg_energy_control/issues",
-  "iot_class": "local_polling",
   "config_flow": true,
+  "documentation": "https://github.com/Schrolli91/heidelberg_energy_control",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/Schrolli91/heidelberg_energy_control/issues",
   "requirements": [
     "pymodbus==3.11.2"
-  ]
+  ],
+  "version": "0.9.0"
 }

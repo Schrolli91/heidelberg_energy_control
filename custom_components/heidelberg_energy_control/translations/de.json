@@ -1,0 +1,61 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "name": "Name",
+          "host": "Host (IP-Adresse)",
+          "port": "Port",
+          "device_id": "Geräte-ID (Modbus Slave ID)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zur Wallbox fehlgeschlagen",
+      "invalid_auth": "Wallbox verbunden, aber keine Antwort (Slave-ID prüfen)",
+      "unknown": "Unerwarteter Fehler"
+    },
+    "abort": {
+      "already_configured": "Diese Wallbox ist bereits konfiguriert"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "charging_state": { "name": "Ladestatus" },
+      "charging_power": { "name": "Ladeleistung" },
+      "total_energy": { "name": "Energie Gesamt" },
+      "session_energy": { "name": "Energie Ladesession" },
+      "energy_since_power_on": { "name": "Energie seit Power on" },
+      "phases_active": { "name": "Aktive Phasen" },
+      "current": { "name": "Ladestrom" },
+      "current_l1": { "name": "Strom L1" },
+      "current_l2": { "name": "Strom L2" },
+      "current_l3": { "name": "Strom L3" },
+      "voltage_l1": { "name": "Spannung L1" },
+      "voltage_l2": { "name": "Spannung L2" },
+      "voltage_l3": { "name": "Spannung L3" },
+      "pcb_temperature": { "name": "Gehäusetemperatur" },
+      "max_current_command": { "name": "Aktuelles Limit (Hardware)" }
+    },
+    "binary_sensor": {
+      "external_lock_state": {
+        "name": "Externer Sperrkontakt",
+        "state": {"on": "Gesperrt", "off": "Freigegen"}
+      },
+      "is_plugged": {
+        "name": "Fahrzeug verbunden",
+        "state": {"on": "Verbunden", "off": "Getrennt"}
+      },
+      "is_charging": {
+        "name": "Fahrzeug lädt",
+        "state": {"on": "Lädt", "off": "Standby"}
+      }
+    },
+    "number": {
+      "max_current_command": { "name": "Vorgabe Ladestrom" }
+    },
+    "switch": {
+      "virtual_enable": { "name": "Ladefreigabe" }
+    }
+  }
+}
