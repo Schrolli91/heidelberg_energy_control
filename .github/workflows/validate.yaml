@@ -1,0 +1,26 @@
+name: Validate with hassfest
+
+on:
+  push: main
+  pull_request:
+  schedule:
+    - cron:  '0 0 * * *'
+
+jobs:
+  validate:
+    name: Validate hassfest
+    runs-on: "ubuntu-latest"
+    container: "catthehacker/ubuntu:act-latest"
+    steps:
+        - uses: "actions/checkout@v4"
+        - uses: "home-assistant/actions/hassfest@master"
+  validate-hacs:
+      name: Validate hacs
+      runs-on: "ubuntu-latest"
+      container: "catthehacker/ubuntu:act-latest"
+      steps:
+        - name: HACS validation
+          uses: "hacs/action@main"
+          with:
+            category: "integration"
+            ignore: brands
