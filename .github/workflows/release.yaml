@@ -1,0 +1,40 @@
+name: Create HACS Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    name: Auto Release on Version Change
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get Version from manifest
+        id: manifest_version
+        run: |
+          VERSION=$(grep '"version"' custom_components/heidelberg_energy_control/manifest.json | cut -d '"' -f 4)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Tag and Release
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          custom_tag: ${{ steps.manifest_version.outputs.version }}
+          tag_prefix: v
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.manifest_version.outputs.version }}
+          name: Release v${{ steps.manifest_version.outputs.version }}
+          generate_release_notes: true
+          draft: false
+          prerelease: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
