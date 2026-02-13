@@ -9,6 +9,8 @@ jobs:
   release:
     name: Auto Release on Version Change
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
