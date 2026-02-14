@@ -1,10 +1,17 @@
 """Constants for the Heidelberg Energy Control integration."""
 
-from datetime import timedelta
-
 from homeassistant.const import Platform
 
+# ##### General #####
 DOMAIN = "heidelberg_energy_control"
+DEVICE_MANUFACTURER = "Heidelberg"
+DEVICE_MODEL = "Energy Control"
+
+# ##### Configuration #####
+# Configuration keys
+CONF_DEVICE_ID = "device_id"
+# Update interval for coordinator
+DEFAULT_SCAN_INTERVAL = 10
 
 # Platforms
 PLATFORMS: list[Platform] = [
@@ -14,7 +21,8 @@ PLATFORMS: list[Platform] = [
     Platform.SWITCH,
 ]
 
-# Data Map Keys
+# ##### Data Keys #####
+# Sensors
 DATA_CHARGING_STATE = "charging_state"
 DATA_CHARGING_POWER = "charging_power"
 DATA_PHASES_ACTIVE = "phases_active"
@@ -30,16 +38,16 @@ DATA_EXTERNAL_LOCK_STATE = "external_lock_state"
 DATA_ENERGY_SINCE_POWER_ON = "energy_since_power_on"
 DATA_TOTAL_ENERGY = "total_energy"
 DATA_SESSION_ENERGY = "session_energy"
-
+# Binary Sensors
 DATA_IS_PLUGGED = "is_plugged"
 DATA_IS_CHARGING = "is_charging"
-
+# Number Input
 COMMAND_MAX_CURRENT = "max_current_command"
 REG_COMMAND_MAX_CURRENT = 261
-
+# Switch
 VIRTUAL_ENABLE = "virtual_enable"
 
-# Modbus Register Definitionen
+# ##### Modbus registers #####
 REG_DATA_START = 5
 REG_DATA_COUNT = 14
 REG_COMMAND_START = 257
@@ -47,7 +55,7 @@ REG_COMMAND_COUNT = 6
 REG_HW_START = 200
 REG_HW_COUNT = 4
 
-# Map für Ladestatus
+# ##### Map for loading state #####
 CHARGING_STATE_MAP = {
     2: "A",
     3: "A",
@@ -60,13 +68,3 @@ CHARGING_STATE_MAP = {
     10: "F",
     11: "Err",
 }
-
-# Device Configuration
-DEVICE_MANUFACTURER = "Heidelberg"
-DEVICE_MODEL = "Energy Control"
-
-# Configuration keys
-CONF_DEVICE_ID = "device_id"
-
-# Update interval for coordinator
-DEFAULT_SCAN_INTERVAL = 10
