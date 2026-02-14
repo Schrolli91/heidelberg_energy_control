@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 from homeassistant.components.number import (
     NumberDeviceClass,
@@ -18,7 +17,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import HeidelbergEnergyControlConfigEntry
 from .const import COMMAND_MAX_CURRENT, REG_COMMAND_MAX_CURRENT
-from .sensor import HeidelbergEntityBase
+from .classes.heidelberg_entity_base import HeidelbergEntityBase
 
 
 @dataclass(frozen=True, kw_only=True)

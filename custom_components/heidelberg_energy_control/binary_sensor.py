@@ -15,7 +15,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import HeidelbergEnergyControlConfigEntry
 from .const import DATA_EXTERNAL_LOCK_STATE, DATA_IS_CHARGING, DATA_IS_PLUGGED
-from .sensor import HeidelbergEntityBase
+from .classes.heidelberg_entity_base import HeidelbergEntityBase
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -11,7 +11,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import HeidelbergEnergyControlConfigEntry
 from .const import COMMAND_MAX_CURRENT, REG_COMMAND_MAX_CURRENT, VIRTUAL_ENABLE
-from .sensor import HeidelbergEntityBase
+from .classes.heidelberg_entity_base import HeidelbergEntityBase
 
 
 async def async_setup_entry(
