@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: read
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -42,20 +43,13 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Generate release changelog
-        if: steps.check_tag.outputs.exists == 'false'
-        id: changelog
-        uses: metcalfc/changelog-generator@v4.3.1
-        with:
-          myToken: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Create GitHub Release
         if: steps.check_tag.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.manifest_version.outputs.version }}
           name: Release v${{ steps.manifest_version.outputs.version }}
-          body: ${{ steps.changelog.outputs.changelog }}
+          generate_release_notes: true
           draft: false
           # Automatically set pre-release status based on version string
           prerelease: ${{ steps.manifest_version.outputs.is_prerelease == 'true' }}
