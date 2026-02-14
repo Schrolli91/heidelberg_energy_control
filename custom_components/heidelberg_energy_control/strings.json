@@ -19,6 +19,16 @@
       "already_configured": "This wallbox is already configured"
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "data": {
+          "scan_interval": "Update Interval (seconds)"
+        },
+        "description": "Adjust how often Home Assistant polls the wallbox. (3-30s / Default: 10s)"
+      }
+    }
+  },
   "entity": {
     "sensor": {
       "charging_state": { "name": "Charging state" },

@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 import logging
 from typing import Any
 
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .const import COMMAND_MAX_CURRENT, DOMAIN, UPDATE_INTERVAL
+from .const import COMMAND_MAX_CURRENT, DEFAULT_SCAN_INTERVAL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -16,16 +19,26 @@ _LOGGER = logging.getLogger(__name__)
 class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
     """Coordinator to manage data fetching from the wallbox."""
 
-    def __init__(self, hass: HomeAssistant, api: Any, versions: dict[str, str]) -> None:
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        api: Any,
+        versions: dict[str, str],
+        entry: ConfigEntry,
+    ) -> None:
         """Initialize the coordinator."""
+
+        scan_interval = entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
+
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=UPDATE_INTERVAL,
+            update_interval=timedelta(seconds=scan_interval),
         )
         self.api = api
         self.versions = versions
+        self.entry = entry
 
         # Proxy storage for EVCC and UI
         # We use float (actual Amperes) as the API provides them this way
