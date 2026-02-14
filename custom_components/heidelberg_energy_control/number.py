@@ -18,7 +18,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import HeidelbergEnergyControlConfigEntry
 from .const import COMMAND_MAX_CURRENT, REG_COMMAND_MAX_CURRENT
-from .sensor import HeidelbergEntity
+from .sensor import HeidelbergEntityBase
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -56,14 +56,14 @@ async def async_setup_entry(
 
     for description in NUMBER_TYPES:
         if description.key == COMMAND_MAX_CURRENT:
-            entities.append(HeidelbergProxyNumber(coordinator, entry, description))
+            entities.append(HeidelbergNumberProxy(coordinator, entry, description))
         else:
-            entities.append(HeidelbergBaseNumber(coordinator, entry, description))
+            entities.append(HeidelbergNumber(coordinator, entry, description))
 
     async_add_entities(entities)
 
 
-class HeidelbergBaseNumber(HeidelbergEntity, NumberEntity):
+class HeidelbergNumber(HeidelbergEntityBase, NumberEntity):
     """Base class for Heidelberg number entities."""
 
     entity_description: HeidelbergNumberEntityDescription
@@ -86,7 +86,7 @@ class HeidelbergBaseNumber(HeidelbergEntity, NumberEntity):
         self.coordinator.async_set_updated_data(self.coordinator.data)
 
 
-class HeidelbergProxyNumber(HeidelbergEntity, NumberEntity, RestoreEntity):
+class HeidelbergNumberProxy(HeidelbergEntityBase, NumberEntity, RestoreEntity):
     """Specialized class for Max Current with Proxy-Logic."""
 
     entity_description: HeidelbergNumberEntityDescription

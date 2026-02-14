@@ -11,7 +11,7 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import HeidelbergEnergyControlConfigEntry
 from .const import COMMAND_MAX_CURRENT, REG_COMMAND_MAX_CURRENT, VIRTUAL_ENABLE
-from .sensor import HeidelbergEntity
+from .sensor import HeidelbergEntityBase
 
 
 async def async_setup_entry(
@@ -24,7 +24,7 @@ async def async_setup_entry(
     async_add_entities([HeidelbergEnableSwitch(coordinator, entry)])
 
 
-class HeidelbergEnableSwitch(HeidelbergEntity, SwitchEntity, RestoreEntity):
+class HeidelbergEnableSwitch(HeidelbergEntityBase, SwitchEntity, RestoreEntity):
     """Representation of an enable switch via logic proxy."""
 
     def __init__(self, coordinator, entry) -> None:

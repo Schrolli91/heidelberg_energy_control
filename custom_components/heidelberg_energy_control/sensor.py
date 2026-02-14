@@ -206,11 +206,11 @@ async def async_setup_entry(
     for description in SENSOR_TYPES:
         if description.key == DATA_TOTAL_ENERGY:
             entities.append(
-                HeidelbergTotalEnergySensor(coordinator, entry, description)
+                HeidelbergSensorEnergyTotal(coordinator, entry, description)
             )
         elif description.key == "session_energy":
             entities.append(
-                HeidelbergSessionEnergySensor(coordinator, entry, description)
+                HeidelbergSensorEnergySession(coordinator, entry, description)
             )
         else:
             entities.append(HeidelbergSensor(coordinator, entry, description))
@@ -218,7 +218,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class HeidelbergEntity(CoordinatorEntity[HeidelbergEnergyControlCoordinator]):
+class HeidelbergEntityBase(CoordinatorEntity[HeidelbergEnergyControlCoordinator]):
     """Common base for all entities."""
 
     _attr_has_entity_name = True
@@ -245,7 +245,7 @@ class HeidelbergEntity(CoordinatorEntity[HeidelbergEnergyControlCoordinator]):
         )
 
 
-class HeidelbergSensor(HeidelbergEntity, SensorEntity):
+class HeidelbergSensor(HeidelbergEntityBase, SensorEntity):
     """Base class for standard Heidelberg sensors."""
 
     @property
@@ -264,7 +264,7 @@ class HeidelbergSensor(HeidelbergEntity, SensorEntity):
         return self.coordinator.data.get(self.entity_description.key)
 
 
-class HeidelbergEnergyBaseSensor(HeidelbergEntity, RestoreEntity, SensorEntity):
+class HeidelbergSensorEnergyBase(HeidelbergEntityBase, RestoreEntity, SensorEntity):
     """Base for energy sensors with jump protection and state restoration."""
 
     def __init__(self, coordinator, entry, description):
@@ -308,7 +308,7 @@ class HeidelbergEnergyBaseSensor(HeidelbergEntity, RestoreEntity, SensorEntity):
         }
 
 
-class HeidelbergTotalEnergySensor(HeidelbergEnergyBaseSensor):
+class HeidelbergSensorEnergyTotal(HeidelbergSensorEnergyBase):
     """Total energy sensor that corrects hardware counter resets."""
 
     @property
@@ -323,7 +323,7 @@ class HeidelbergTotalEnergySensor(HeidelbergEnergyBaseSensor):
         return self._attr_native_value
 
 
-class HeidelbergSessionEnergySensor(HeidelbergEnergyBaseSensor):
+class HeidelbergSensorEnergySession(HeidelbergSensorEnergyBase):
     """Session energy sensor with jump protection and 'reset-on-connect' logic."""
 
     def __init__(self, coordinator, entry, description):

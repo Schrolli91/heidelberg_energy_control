@@ -15,7 +15,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import HeidelbergEnergyControlConfigEntry
 from .const import DATA_EXTERNAL_LOCK_STATE, DATA_IS_CHARGING, DATA_IS_PLUGGED
-from .sensor import HeidelbergEntity
+from .sensor import HeidelbergEntityBase
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -56,7 +56,7 @@ async def async_setup_entry(
     )
 
 
-class HeidelbergBinarySensor(HeidelbergEntity, BinarySensorEntity):
+class HeidelbergBinarySensor(HeidelbergEntityBase, BinarySensorEntity):
     """Representation of a Heidelberg Binary Sensor."""
 
     @property
