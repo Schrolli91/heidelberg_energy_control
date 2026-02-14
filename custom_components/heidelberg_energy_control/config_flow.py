@@ -19,7 +19,7 @@ from homeassistant.helpers import selector
 
 from .core.exceptions import CannotConnect, InvalidAuth
 
-from .api import HeidelbergEnergyControlAPI
+from .core.api import HeidelbergEnergyControlAPI
 from .const import CONF_DEVICE_ID, DEFAULT_SCAN_INTERVAL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
