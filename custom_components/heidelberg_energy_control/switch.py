@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from dataclasses import dataclass
 
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.core import HomeAssistant
@@ -14,6 +14,20 @@ from .const import COMMAND_MAX_CURRENT, REG_COMMAND_MAX_CURRENT, VIRTUAL_ENABLE
 from .classes.heidelberg_entity_base import HeidelbergEntityBase
 
 
+@dataclass(frozen=True, kw_only=True)
+class HeidelbergSwitchEntityDescription(SwitchEntityDescription):
+    """Class describing Heidelberg switch entities."""
+
+
+SWITCH_TYPES: tuple[HeidelbergSwitchEntityDescription, ...] = (
+    HeidelbergSwitchEntityDescription(
+        key=VIRTUAL_ENABLE,
+        translation_key=VIRTUAL_ENABLE,
+        icon="mdi:power",
+    ),
+)
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: HeidelbergEnergyControlConfigEntry,
@@ -21,19 +35,17 @@ async def async_setup_entry(
 ) -> None:
     """Set up the switch platform."""
     coordinator = entry.runtime_data
-    async_add_entities([HeidelbergEnableSwitch(coordinator, entry)])
+    async_add_entities(
+        HeidelbergSwitchVirtual(coordinator, entry, description)
+        for description in SWITCH_TYPES
+    )
 
 
-class HeidelbergEnableSwitch(HeidelbergEntityBase, SwitchEntity, RestoreEntity):
+class HeidelbergSwitchVirtual(HeidelbergEntityBase, SwitchEntity, RestoreEntity):
     """Representation of an enable switch via logic proxy."""
 
-    def __init__(self, coordinator, entry) -> None:
+    def __init__(self, coordinator, entry, description: HeidelbergSwitchEntityDescription) -> None:
         """Initialize."""
-        description = SwitchEntityDescription(
-            key=VIRTUAL_ENABLE,
-            translation_key=VIRTUAL_ENABLE,
-            icon="mdi:power",
-        )
         super().__init__(coordinator, entry, description)
 
     async def async_added_to_hass(self) -> None:
