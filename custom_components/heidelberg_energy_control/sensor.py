@@ -44,6 +44,7 @@ from .const import (
 
 from .classes.heidelberg_entity_base import HeidelbergEntityBase
 from .classes.heidelberg_sensor import HeidelbergSensor
+from .classes.heidelberg_sensor_active_phases import HeidelbergSensorActivePhases
 from .classes.heidelberg_sensor_energy_base import HeidelbergSensorEnergyBase
 from .classes.heidelberg_sensor_energy_total import HeidelbergSensorEnergyTotal
 from .classes.heidelberg_sensor_energy_session import HeidelbergSensorEnergySession
@@ -209,6 +210,10 @@ async def async_setup_entry(
         elif description.key == DATA_SESSION_ENERGY:
             entities.append(
                 HeidelbergSensorEnergySession(coordinator, entry, description)
+            )
+        elif description.key == DATA_PHASES_ACTIVE:
+            entities.append(
+                HeidelbergSensorActivePhases(coordinator, entry, description)
             )
         else:
             entities.append(HeidelbergSensor(coordinator, entry, description))
