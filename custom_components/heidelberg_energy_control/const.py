@@ -69,4 +69,4 @@ DEVICE_MODEL = "Energy Control"
 CONF_DEVICE_ID = "device_id"
 
 # Update interval for coordinator
-UPDATE_INTERVAL = timedelta(seconds=10)
+DEFAULT_SCAN_INTERVAL = 10

@@ -18,10 +18,13 @@ type HeidelbergEnergyControlConfigEntry = ConfigEntry[
     HeidelbergEnergyControlCoordinator
 ]
 
+
 async def async_setup_entry(
     hass: HomeAssistant, entry: HeidelbergEnergyControlConfigEntry
 ) -> bool:
     """Set up Heidelberg Energy Control from a config entry."""
+
+    entry.async_on_unload(entry.add_update_listener(update_listener))
 
     api = HeidelbergEnergyControlAPI(
         host=entry.data["host"],
@@ -46,9 +49,7 @@ async def async_setup_entry(
         raise ConfigEntryNotReady(f"Error communicating with wallbox: {err}") from err
 
     coordinator = HeidelbergEnergyControlCoordinator(
-        hass=hass,
-        api=api,
-        versions=versions,
+        hass=hass, api=api, versions=versions, entry=entry
     )
 
     await coordinator.async_config_entry_first_refresh()
@@ -64,3 +65,8 @@ async def async_unload_entry(
     """Unload a config entry."""
     await entry.runtime_data.api.disconnect()
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Handle options update."""
+    await hass.config_entries.async_reload(entry.entry_id)
