@@ -45,12 +45,12 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
         self.versions = versions
         self.entry = entry
 
-        # Internal state memory
+        # Internal state memory for proxy logic
         self.target_current: float = 16.0
         self.logic_enabled: bool = False
         self._initial_fetch_done: bool = False
 
-        # Initialize data dictionary with default states
+        # Initialize data dictionary with default states to prevent UI flicker
         self.data: dict[str, Any] = {
             VIRTUAL_ENABLE: False,
             VIRTUAL_TARGET_CURRENT: 16.0,
@@ -60,60 +60,79 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from hardware and sync virtual states."""
         try:
-            # Fetch all registers via API
+            # Fetch all registers from the wallbox via Modbus API
             data = await self.api.async_get_data()
+            if not data:
+                return self.data
 
-            if data and not self._initial_fetch_done:
-                # Sync logic with hardware state once during startup
-                hw_current = data.get(COMMAND_TARGET_CURRENT, 0.0)
+            # Get the current limit directly from the hardware register
+            hw_current = float(data.get(COMMAND_TARGET_CURRENT, 0.0))
+
+            # Initial sync on startup: Adopt the wallbox's current state
+            if not self._initial_fetch_done:
                 if hw_current > 0:
-                    self.target_current = float(hw_current)
+                    self.target_current = hw_current
                     self.logic_enabled = True
                 self._initial_fetch_done = True
 
-            # Ensure virtual states are always present in the data dict
+            # Bidirectional Synchronization Logic:
+            # 1. If hardware is 0, the virtual 'enable' switch must be turned OFF
+            if hw_current == 0.0 and self.logic_enabled:
+                _LOGGER.info("Wallbox reported 0.0A: Setting virtual enable to OFF")
+                self.logic_enabled = False
+
+            # 2. If hardware is > 0 but our switch was OFF (e.g. external override),
+            # we must turn the switch ON and update our target slider to match reality
+            elif hw_current > 0.0 and not self.logic_enabled:
+                _LOGGER.info("Wallbox reported %sA (external change): Setting virtual enable to ON", hw_current)
+                self.logic_enabled = True
+                self.target_current = hw_current
+
+            # Ensure virtual states are always synced into the data dict for the generic UI entities
             data[VIRTUAL_ENABLE] = self.logic_enabled
             data[VIRTUAL_TARGET_CURRENT] = self.target_current
 
-            # COMMAND_TARGET_CURRENT remains the raw value from the hardware (0.0 if disabled)
+            # Note: COMMAND_TARGET_CURRENT remains the raw hardware value (will show 0.0 when logic is off)
             return data
 
         except Exception as err:
             raise UpdateFailed(f"Error communicating with Modbus API: {err}")
 
     async def _write_current_to_wallbox(self, value: float) -> None:
-        """Write value to Modbus and update local hardware state immediately."""
+        """Internal helper to write a specific Ampere value to the Modbus register."""
         modbus_value = int(value * 10.0)
         try:
             await self.api.async_write_register(REG_COMMAND_TARGET_CURRENT, modbus_value)
-            # Update hardware sensor state (Optimistic UI)
+
+            # Optimistic UI update: Update hardware sensor state immediately in data map
             self.data[COMMAND_TARGET_CURRENT] = value
             self.async_set_updated_data(self.data)
         except Exception as err:
             _LOGGER.error("Failed to write to wallbox register %s: %s", REG_COMMAND_TARGET_CURRENT, err)
 
     async def async_handle_switch_state_change(self, key: str, is_on: bool) -> None:
-        """Handle virtual enable switch and update hardware current."""
+        """Handle UI requests from the virtual enable switch."""
         if key == VIRTUAL_ENABLE:
             self.logic_enabled = is_on
             self.data[VIRTUAL_ENABLE] = is_on
 
-            # If enabled -> use target_current, if disabled -> set hardware to 0A
+            # Logic: If ON -> restore last known target, if OFF -> set hardware to 0.0A
             current_to_write = self.target_current if is_on else 0.0
             await self._write_current_to_wallbox(current_to_write)
 
+            # Trigger immediate UI refresh
             self.async_set_updated_data(self.data)
 
     async def async_handle_number_set(self, key: str, value: float) -> None:
-        """Handle virtual slider changes and update hardware if charging is enabled."""
+        """Handle UI requests from the virtual target current slider."""
         if key == VIRTUAL_TARGET_CURRENT:
-            # Always store the new 'desired' value
+            # Always store the new 'desired' value, even if wallbox is currently disabled
             self.target_current = value
             self.data[VIRTUAL_TARGET_CURRENT] = value
 
-            # Only push to hardware if the charging logic is currently ON
+            # Only push the update to hardware if the charging logic is currently ENABLED
             if self.logic_enabled:
                 await self._write_current_to_wallbox(value)
             else:
-                _LOGGER.debug("Stored new target %sA, hardware remains at 0A", value)
+                _LOGGER.debug("Stored new target %sA, hardware remains at 0.0A until enabled", value)
                 self.async_set_updated_data(self.data)
