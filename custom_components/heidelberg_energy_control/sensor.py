@@ -33,7 +33,6 @@ from .const import (
     DATA_CURRENT_L2,
     DATA_CURRENT_L3,
     DATA_ENERGY_SINCE_POWER_ON,
-    DATA_IS_PLUGGED,
     DATA_PCB_TEMPERATURE,
     DATA_PHASES_ACTIVE,
     DATA_SESSION_ENERGY,
@@ -41,11 +40,7 @@ from .const import (
     DATA_VOLTAGE_L1,
     DATA_VOLTAGE_L2,
     DATA_VOLTAGE_L3,
-    DEVICE_MANUFACTURER,
-    DEVICE_MODEL,
-    DOMAIN,
 )
-from .coordinator import HeidelbergEnergyControlCoordinator
 
 from .classes.heidelberg_entity_base import HeidelbergEntityBase
 from .classes.heidelberg_sensor import HeidelbergSensor
