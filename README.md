@@ -1,24 +1,17 @@
 # Heidelberg Energy Control for Home Assistant
-This integration allows you to monitor and control your **Heidelberg Energy Control** wallbox in Home Assistant via Modbus TCP.
 
+This integration allows you to monitor and control your **Heidelberg Energy Control** wallbox in Home Assistant via Modbus TCP.
 
 ## Overview
 The Heidelberg Energy Control wallbox supports the Modbus RTU protocol for external control. Since Home Assistant communicates over your network, a **Modbus TCP to RTU gateway** (like a PE11 or similar) is typically required to bridge the connection unless your wallbox is equipped with a native network interface.
 
-
 ## Installation via HACS
-Since this integration is not yet part of the HACS default store, you need to add it as a **Custom Repository**:
+This integration is part of the **HACS Default Store**. To install it:
 
 1. In Home Assistant, navigate to **HACS**.
-2. Click on **Integrations**.
-3. Click the **three dots** in the upper right corner and select **Custom repositories**.
-4. Enter the URL of this GitHub project:
-`https://github.com/Schrolli91/heidelberg_energy_control`
-5. Select **Integration** as the category.
-6. Click **Add**.
-7. The integration will now appear in your list. Click **Download** and choose the latest version.
-8. **Restart Home Assistant.**
-
+2. Search for **Heidelberg Energy Control**.
+3. Click **Download** and choose the latest version.
+4. **Restart Home Assistant.**
 
 ## Configuration
 Once restarted, you can set up the integration through the UI:
@@ -27,12 +20,19 @@ Once restarted, you can set up the integration through the UI:
 2. Click **Add Integration**.
 3. Search for **Heidelberg Energy Control**.
 4. Enter the required details:
-* **Host**: The IP address of your Modbus TCP gateway.
-* **Port**: Usually `502`.
-* **Slave ID**: The Modbus ID of your wallbox (default is often `1`).
+    * **Display Name**: A name for your wallbox (e.g., "Garage Wallbox").
+    * **Host**: The IP address of your Modbus TCP gateway.
+    * **Port**: Usually `502`.
+    * **Slave ID**: The Modbus ID of your wallbox (default is often `1`).
 
+### Options (Dynamic Configuration)
+After the initial setup, you can adjust settings without restarting:
+1. Go to **Settings** > **Devices & Services**.
+2. Find the **Heidelberg Energy Control** entry.
+3. Click **Configure**.
+4. **Polling Interval**: Adjust how often data is requested (between 3 and 30 seconds / Defaults to 10 seconds).
 
-### Features
+## Features
 This integration provides a comprehensive set of entities to monitor and control your wallbox:
 
 #### 🎮 Controls
@@ -50,14 +50,12 @@ This integration provides a comprehensive set of entities to monitor and control
 * **Phase-specific Data**: Individual monitoring of Voltage (V) and Current (A) for each phase (**L1, L2, L3**).
 * **Hardware Limit**: Displays the physical current limit, set via modbus on the wallbox.
 * **External Lock**: Status of the hardware lock contact.
-* **Charge Status Code**: Raw status code from the wallbox (e.g., State A, B, C).
 * **Internal Temperature**: Monitor the housing temperature of the wallbox.
-* **Energy since Power On**: Energy consumed since the last reboot of the device.
+* **Modbus Performance**: Diagnostic logs show the response time of your gateway (useful for optimizing PV-surplus charging like **evcc**).
 
 #### 🏠 Local Control
 * **No Cloud Required**: Works completely offline via your local network.
 * **Fast Updates**: Direct communication via Modbus TCP for near real-time data.
-
 
 ## Disclaimer
 **This is a private, community-driven project. It is NOT an official integration from Heidelberg (Amperfied).**
