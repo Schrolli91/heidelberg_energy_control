@@ -1,8 +1,8 @@
 changelog:
   exclude:
-    labels:
-      - chore
-      - ci
+    # labels:
+    #   - chore
+    #   - ci
     authors:
       - github-actions[bot]
   categories:
