@@ -52,7 +52,7 @@ async def validate_input(data: dict[str, Any]) -> dict[str, Any]:
         if versions is None:
             raise InvalidAuth
 
-    except CannotConnect, InvalidAuth:
+    except (CannotConnect, InvalidAuth):
         raise
     except Exception as err:
         _LOGGER.error("Connection validation failed: %s", err)
