@@ -6,7 +6,6 @@ from dataclasses import dataclass
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
-    BinarySensorEntity,
     BinarySensorEntityDescription,
 )
 from homeassistant.const import EntityCategory
@@ -14,8 +13,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import HeidelbergEnergyControlConfigEntry
+from .classes.heidelberg_binary_sensor import HeidelbergBinarySensor
 from .const import DATA_EXTERNAL_LOCK_STATE, DATA_IS_CHARGING, DATA_IS_PLUGGED
-from .sensor import HeidelbergEntity
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -54,12 +53,3 @@ async def async_setup_entry(
         HeidelbergBinarySensor(coordinator, entry, description)
         for description in BINARY_SENSOR_TYPES
     )
-
-
-class HeidelbergBinarySensor(HeidelbergEntity, BinarySensorEntity):
-    """Representation of a Heidelberg Binary Sensor."""
-
-    @property
-    def is_on(self) -> bool | None:
-        """Return true if the binary sensor is on."""
-        return bool(self.coordinator.data.get(self.entity_description.key, False))

@@ -8,9 +8,9 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 
-from .api import HeidelbergEnergyControlAPI
 from .const import PLATFORMS
 from .coordinator import HeidelbergEnergyControlCoordinator
+from .core.api import HeidelbergEnergyControlAPI
 
 _LOGGER = logging.getLogger(__name__)
 
