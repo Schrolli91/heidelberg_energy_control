@@ -15,8 +15,9 @@ from homeassistant.config_entries import (
 )
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_SCAN_INTERVAL
 from homeassistant.core import callback
-from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import selector
+
+from .core.exceptions import CannotConnect, InvalidAuth
 
 from .api import HeidelbergEnergyControlAPI
 from .const import CONF_DEVICE_ID, DEFAULT_SCAN_INTERVAL, DOMAIN
@@ -131,11 +132,3 @@ class HeidelbergOptionsFlowHandler(OptionsFlow):
                 }
             ),
         )
-
-
-class CannotConnect(HomeAssistantError):
-    """Error to indicate we cannot connect to the network host."""
-
-
-class InvalidAuth(HomeAssistantError):
-    """Error to indicate the device is not responding (likely wrong Slave ID)."""
