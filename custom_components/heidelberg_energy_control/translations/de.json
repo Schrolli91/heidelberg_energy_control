@@ -19,6 +19,16 @@
       "already_configured": "Diese Wallbox ist bereits konfiguriert"
     }
   },
+    "options": {
+    "step": {
+      "init": {
+        "data": {
+          "scan_interval": "Update Intervall (Sekunden)"
+        },
+        "description": "Wähle wie oft die Daten von der Wallbox geholt werden sollen. (3-30s / Standard: 10s)"
+      }
+    }
+  },
   "entity": {
     "sensor": {
       "charging_state": { "name": "Ladestatus" },

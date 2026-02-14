@@ -7,14 +7,22 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
+from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_SCAN_INTERVAL
+from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import selector
 
 from .api import HeidelbergEnergyControlAPI
-from .const import CONF_DEVICE_ID, DOMAIN
+from .const import CONF_DEVICE_ID, DEFAULT_SCAN_INTERVAL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
@@ -35,13 +43,10 @@ async def validate_input(data: dict[str, Any]) -> dict[str, Any]:
     )
 
     try:
-        # 1. Check network connection
         if not await api.connect():
             raise CannotConnect
 
-        # 2. Check modbus data connection
         versions = await api.test_connection()
-
         await api.disconnect()
 
         if versions is None:
@@ -68,7 +73,6 @@ class HeidelbergEnergyControlConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            # Unique ID based on host name
             await self.async_set_unique_id(user_input[CONF_HOST])
             self._abort_if_unique_id_configured()
 
@@ -85,6 +89,47 @@ class HeidelbergEnergyControlConfigFlow(ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
+        )
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: ConfigEntry,
+    ) -> HeidelbergOptionsFlowHandler:
+        """Get the options flow for this handler."""
+        return HeidelbergOptionsFlowHandler()
+
+
+class HeidelbergOptionsFlowHandler(OptionsFlow):
+    """Handle the options flow for the integration."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Manage the options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_SCAN_INTERVAL,
+                        default=self.config_entry.options.get(
+                            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+                        ),
+                    ): selector.NumberSelector(
+                        selector.NumberSelectorConfig(
+                            min=3,
+                            max=30,
+                            step=1,
+                            unit_of_measurement="s",
+                            mode=selector.NumberSelectorMode.BOX,  # BOX macht ein sauberes Eingabefeld statt Schieberegler
+                        ),
+                    ),
+                }
+            ),
         )
 
 
