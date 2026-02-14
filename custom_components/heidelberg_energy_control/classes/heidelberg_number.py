@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import logging
+
 from homeassistant.components.number import NumberEntity
+
 from ..classes.heidelberg_entity_base import HeidelbergEntityBase
 
 _LOGGER = logging.getLogger(__name__)
+
 
 class HeidelbergNumber(HeidelbergEntityBase, NumberEntity):
     """Base class for Heidelberg hardware number entities (Modbus)."""
@@ -20,11 +23,13 @@ class HeidelbergNumber(HeidelbergEntityBase, NumberEntity):
         """Write value to hardware and update coordinator data."""
 
         # Guard clause: Ensure register and multiplier are present
-        if (self.entity_description.register is None or
-            self.entity_description.multiplier is None):
+        if (
+            self.entity_description.register is None
+            or self.entity_description.multiplier is None
+        ):
             _LOGGER.error(
                 "Cannot write %s: Missing register or multiplier in description",
-                self.entity_description.key
+                self.entity_description.key,
             )
             return
 

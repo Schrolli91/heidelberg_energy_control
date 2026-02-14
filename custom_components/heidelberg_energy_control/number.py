@@ -15,9 +15,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import HeidelbergEnergyControlConfigEntry
-from .const import VIRTUAL_TARGET_CURRENT
 from .classes.heidelberg_number import HeidelbergNumber
 from .classes.heidelberg_number_virtual import HeidelbergNumberVirtual
+from .const import VIRTUAL_TARGET_CURRENT
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -59,4 +59,3 @@ async def async_setup_entry(
             entities.append(HeidelbergNumber(coordinator, entry, description))
 
     async_add_entities(entities)
-

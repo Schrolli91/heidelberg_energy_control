@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
-from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -24,6 +23,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import HeidelbergEnergyControlConfigEntry
+from .classes.heidelberg_sensor import HeidelbergSensor
+from .classes.heidelberg_sensor_active_phases import HeidelbergSensorActivePhases
+from .classes.heidelberg_sensor_energy_session import HeidelbergSensorEnergySession
+from .classes.heidelberg_sensor_energy_total import HeidelbergSensorEnergyTotal
 from .const import (
     COMMAND_TARGET_CURRENT,
     DATA_CHARGING_POWER,
@@ -41,13 +44,6 @@ from .const import (
     DATA_VOLTAGE_L2,
     DATA_VOLTAGE_L3,
 )
-
-from .classes.heidelberg_entity_base import HeidelbergEntityBase
-from .classes.heidelberg_sensor import HeidelbergSensor
-from .classes.heidelberg_sensor_active_phases import HeidelbergSensorActivePhases
-from .classes.heidelberg_sensor_energy_base import HeidelbergSensorEnergyBase
-from .classes.heidelberg_sensor_energy_total import HeidelbergSensorEnergyTotal
-from .classes.heidelberg_sensor_energy_session import HeidelbergSensorEnergySession
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -219,5 +215,3 @@ async def async_setup_entry(
             entities.append(HeidelbergSensor(coordinator, entry, description))
 
     async_add_entities(entities)
-
-

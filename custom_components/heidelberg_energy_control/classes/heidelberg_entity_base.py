@@ -8,11 +8,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .. import HeidelbergEnergyControlConfigEntry
-from ..const import (
-    DEVICE_MANUFACTURER,
-    DEVICE_MODEL,
-    DOMAIN,
-)
+from ..const import DEVICE_MANUFACTURER, DEVICE_MODEL, DOMAIN
 from ..coordinator import HeidelbergEnergyControlCoordinator
 
 

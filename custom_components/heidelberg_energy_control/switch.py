@@ -5,13 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from homeassistant.components.number import NumberEntity
 from homeassistant.components.switch import SwitchEntityDescription
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import HeidelbergEnergyControlConfigEntry
-from .const import VIRTUAL_ENABLE
 from .classes.heidelberg_switch_virtual import HeidelbergSwitchVirtual
+from .const import VIRTUAL_ENABLE
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -45,4 +46,3 @@ async def async_setup_entry(
             # entities.append(HeidelbergSwitch(coordinator, entry, description))
 
     async_add_entities(entities)
-

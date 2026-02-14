@@ -17,10 +17,9 @@ from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_SCAN_INTER
 from homeassistant.core import callback
 from homeassistant.helpers import selector
 
-from .core.exceptions import CannotConnect, InvalidAuth
-
-from .core.api import HeidelbergEnergyControlAPI
 from .const import CONF_DEVICE_ID, DEFAULT_SCAN_INTERVAL, DOMAIN
+from .core.api import HeidelbergEnergyControlAPI
+from .core.exceptions import CannotConnect, InvalidAuth
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,7 +52,7 @@ async def validate_input(data: dict[str, Any]) -> dict[str, Any]:
         if versions is None:
             raise InvalidAuth
 
-    except (CannotConnect, InvalidAuth):
+    except CannotConnect, InvalidAuth:
         raise
     except Exception as err:
         _LOGGER.error("Connection validation failed: %s", err)

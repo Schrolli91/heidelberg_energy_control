@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import logging
 from datetime import timedelta
+import logging
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
@@ -21,6 +21,7 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
 
 class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
     """Coordinator to manage data fetching and proxy logic."""
@@ -84,7 +85,10 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
             # 2. If hardware is > 0 but our switch was OFF (e.g. external override),
             # we must turn the switch ON and update our target slider to match reality
             elif hw_current > 0.0 and not self.logic_enabled:
-                _LOGGER.info("Wallbox reported %sA (external change): Setting virtual enable to ON", hw_current)
+                _LOGGER.info(
+                    "Wallbox reported %sA (external change): Setting virtual enable to ON",
+                    hw_current,
+                )
                 self.logic_enabled = True
                 self.target_current = hw_current
 
@@ -102,13 +106,19 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
         """Internal helper to write a specific Ampere value to the Modbus register."""
         modbus_value = int(value * 10.0)
         try:
-            await self.api.async_write_register(REG_COMMAND_TARGET_CURRENT, modbus_value)
+            await self.api.async_write_register(
+                REG_COMMAND_TARGET_CURRENT, modbus_value
+            )
 
             # Optimistic UI update: Update hardware sensor state immediately in data map
             self.data[COMMAND_TARGET_CURRENT] = value
             self.async_set_updated_data(self.data)
         except Exception as err:
-            _LOGGER.error("Failed to write to wallbox register %s: %s", REG_COMMAND_TARGET_CURRENT, err)
+            _LOGGER.error(
+                "Failed to write to wallbox register %s: %s",
+                REG_COMMAND_TARGET_CURRENT,
+                err,
+            )
 
     async def async_handle_switch_state_change(self, key: str, is_on: bool) -> None:
         """Handle UI requests from the virtual enable switch."""
@@ -134,5 +144,8 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
             if self.logic_enabled:
                 await self._write_current_to_wallbox(value)
             else:
-                _LOGGER.debug("Stored new target %sA, hardware remains at 0.0A until enabled", value)
+                _LOGGER.debug(
+                    "Stored new target %sA, hardware remains at 0.0A until enabled",
+                    value,
+                )
                 self.async_set_updated_data(self.data)

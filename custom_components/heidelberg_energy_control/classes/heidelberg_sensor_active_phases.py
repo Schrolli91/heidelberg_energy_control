@@ -6,6 +6,7 @@ from homeassistant.components.sensor import SensorEntity
 
 from .heidelberg_sensor import HeidelbergSensor
 
+
 class HeidelbergSensorActivePhases(HeidelbergSensor, SensorEntity):
     """Class for the active phases sensor with dynamic icon."""
 

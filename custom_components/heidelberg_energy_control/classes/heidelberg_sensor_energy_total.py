@@ -1,8 +1,10 @@
 """Heidelberg Sensor Energy Total class."""
 
-from typing import Any
+import logging
 
 from .heidelberg_sensor_energy_base import HeidelbergSensorEnergyBase
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class HeidelbergSensorEnergyTotal(HeidelbergSensorEnergyBase):

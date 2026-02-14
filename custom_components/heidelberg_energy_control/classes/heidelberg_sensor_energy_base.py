@@ -1,11 +1,14 @@
 """Heidelberg Sensor Energy Base class."""
 
+import logging
 from typing import Any
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from .heidelberg_entity_base import HeidelbergEntityBase
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class HeidelbergSensorEnergyBase(HeidelbergEntityBase, RestoreEntity, SensorEntity):

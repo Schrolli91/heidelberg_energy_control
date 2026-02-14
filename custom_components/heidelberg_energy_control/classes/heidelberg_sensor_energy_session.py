@@ -1,9 +1,12 @@
 """Heidelberg Sensor Energy Session class."""
 
+import logging
 from typing import Any
 
+from ..const import DATA_IS_PLUGGED, DATA_TOTAL_ENERGY
 from .heidelberg_sensor_energy_base import HeidelbergSensorEnergyBase
-from ..const import DATA_TOTAL_ENERGY, DATA_IS_PLUGGED
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class HeidelbergSensorEnergySession(HeidelbergSensorEnergyBase):
