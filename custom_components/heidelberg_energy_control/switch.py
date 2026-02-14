@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.core import HomeAssistant
@@ -10,7 +11,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import HeidelbergEnergyControlConfigEntry
-from .const import COMMAND_MAX_CURRENT, REG_COMMAND_MAX_CURRENT, VIRTUAL_ENABLE
+from .const import VIRTUAL_ENABLE
 from .classes.heidelberg_entity_base import HeidelbergEntityBase
 
 
@@ -35,58 +36,44 @@ async def async_setup_entry(
 ) -> None:
     """Set up the switch platform."""
     coordinator = entry.runtime_data
-    async_add_entities(
-        HeidelbergSwitchVirtual(coordinator, entry, description)
-        for description in SWITCH_TYPES
-    )
+    entities: list[NumberEntity] = []
+
+    for description in SWITCH_TYPES:
+        if description.key == VIRTUAL_ENABLE:
+            entities.append(HeidelbergSwitchVirtual(coordinator, entry, description))
+        else:
+            pass
+            # entities.append(HeidelbergSwitch(coordinator, entry, description))
+
+    async_add_entities(entities)
 
 
 class HeidelbergSwitchVirtual(HeidelbergEntityBase, SwitchEntity, RestoreEntity):
-    """Representation of an enable switch via logic proxy."""
-
-    def __init__(self, coordinator, entry, description: HeidelbergSwitchEntityDescription) -> None:
-        """Initialize."""
-        super().__init__(coordinator, entry, description)
+    """Generic representation of a virtual logic switch."""
 
     async def async_added_to_hass(self) -> None:
-        """Handle entity which will be added."""
+        """Restore state and sync with coordinator."""
         await super().async_added_to_hass()
         if (state := await self.async_get_last_state()) is not None:
-            self.coordinator.logic_enabled = state.state == "on"
-
-            # Initialer Sync beim Start
-            if self.coordinator.logic_enabled:
-                modbus_value = int(self.coordinator.target_current * 10.0)
-                await self.coordinator.api.async_write_register(
-                    REG_COMMAND_MAX_CURRENT, modbus_value
-                )
-        else:
-            self.coordinator.logic_enabled = False
+            is_on = state.state == "on"
+            # Update coordinator state immediately for logic processing
+            await self.coordinator.async_handle_switch_state_change(
+                self.entity_description.key, is_on
+            )
 
     @property
     def is_on(self) -> bool:
-        """Return true if wallbox is logically enabled."""
-        return self.coordinator.logic_enabled
+        """Return the state from the central coordinator data store."""
+        return self.coordinator.data.get(self.entity_description.key, False)
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        """Enable charging and update UI optimistically."""
-        self.coordinator.logic_enabled = True
-        modbus_value = int(self.coordinator.target_current * 10.0)
-
-        await self.coordinator.api.async_write_register(
-            REG_COMMAND_MAX_CURRENT, modbus_value
+        """Forward turn_on request to coordinator."""
+        await self.coordinator.async_handle_switch_state_change(
+            self.entity_description.key, True
         )
 
-        # Optimistic Update
-        self.coordinator.data[COMMAND_MAX_CURRENT] = self.coordinator.target_current
-        self.coordinator.async_set_updated_data(self.coordinator.data)
-
     async def async_turn_off(self, **kwargs: Any) -> None:
-        """Disable charging and update UI optimistically."""
-        self.coordinator.logic_enabled = False
-
-        await self.coordinator.api.async_write_register(REG_COMMAND_MAX_CURRENT, 0)
-
-        # Optimistic Update
-        self.coordinator.data[COMMAND_MAX_CURRENT] = 0.0
-        self.coordinator.async_set_updated_data(self.coordinator.data)
+        """Forward turn_off request to coordinator."""
+        await self.coordinator.async_handle_switch_state_change(
+            self.entity_description.key, False
+        )

@@ -41,11 +41,12 @@ DATA_SESSION_ENERGY = "session_energy"
 # Binary Sensors
 DATA_IS_PLUGGED = "is_plugged"
 DATA_IS_CHARGING = "is_charging"
-# Number Input
-COMMAND_MAX_CURRENT = "max_current_command"
-REG_COMMAND_MAX_CURRENT = 261
-# Switch
+# Hardware Command
+COMMAND_TARGET_CURRENT = "max_current_command"
+REG_COMMAND_TARGET_CURRENT = 261
+# Virtual
 VIRTUAL_ENABLE = "virtual_enable"
+VIRTUAL_TARGET_CURRENT = "virtual_current"
 
 # ##### Modbus registers #####
 REG_DATA_START = 5

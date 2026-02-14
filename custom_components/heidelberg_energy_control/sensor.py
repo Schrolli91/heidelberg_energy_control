@@ -25,7 +25,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import HeidelbergEnergyControlConfigEntry
 from .const import (
-    COMMAND_MAX_CURRENT,
+    COMMAND_TARGET_CURRENT,
     DATA_CHARGING_POWER,
     DATA_CHARGING_STATE,
     DATA_CURRENT,
@@ -182,8 +182,8 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         entity_registry_enabled_default=False,
     ),
     HeidelbergSensorEntityDescription(
-        key=COMMAND_MAX_CURRENT,
-        translation_key=COMMAND_MAX_CURRENT,
+        key=COMMAND_TARGET_CURRENT,
+        translation_key=COMMAND_TARGET_CURRENT,
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,

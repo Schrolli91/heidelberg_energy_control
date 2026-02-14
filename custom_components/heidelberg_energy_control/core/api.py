@@ -11,7 +11,7 @@ from pymodbus.exceptions import ModbusException
 
 from ..const import (
     CHARGING_STATE_MAP,
-    COMMAND_MAX_CURRENT,
+    COMMAND_TARGET_CURRENT,
     DATA_CHARGING_POWER,
     DATA_CHARGING_STATE,
     DATA_CURRENT,
@@ -193,7 +193,7 @@ class HeidelbergEnergyControlAPI:
                 DATA_IS_PLUGGED: data_regs[0] >= 4,
                 DATA_IS_CHARGING: data_regs[9] > 0,
                 # COMMAND
-                COMMAND_MAX_CURRENT: command_regs[4] / 10.0,
+                COMMAND_TARGET_CURRENT: command_regs[4] / 10.0,
             }
 
         except Exception as err:
