@@ -55,7 +55,7 @@ REG_COMMAND_COUNT = 6
 REG_HW_START = 200
 REG_HW_COUNT = 4
 
-# ##### Map for loading state #####
+# ##### Map for charging state #####
 CHARGING_STATE_MAP = {
     2: "A",
     3: "A",
