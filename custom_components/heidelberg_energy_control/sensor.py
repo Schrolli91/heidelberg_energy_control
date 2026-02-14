@@ -206,7 +206,7 @@ async def async_setup_entry(
             entities.append(
                 HeidelbergSensorEnergyTotal(coordinator, entry, description)
             )
-        elif description.key == "session_energy":
+        elif description.key == DATA_SESSION_ENERGY:
             entities.append(
                 HeidelbergSensorEnergySession(coordinator, entry, description)
             )
