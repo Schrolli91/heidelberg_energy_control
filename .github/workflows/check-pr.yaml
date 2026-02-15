@@ -20,6 +20,9 @@ jobs:
   task-check:
     name: Validate PR Tasks
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      contents: read
     steps:
       - uses: kentaro-m/task-completed-checker-action@v0.1.2
         with:
