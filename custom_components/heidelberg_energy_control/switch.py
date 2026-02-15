@@ -7,6 +7,7 @@ from typing import Any
 
 from homeassistant.components.number import NumberEntity
 from homeassistant.components.switch import SwitchEntityDescription
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -31,6 +32,7 @@ SWITCH_TYPES: tuple[HeidelbergSwitchEntityDescription, ...] = (
         key=COMMAND_REMOTE_LOCK,
         translation_key=COMMAND_REMOTE_LOCK,
         icon="mdi:lock",
+        entity_category=EntityCategory.CONFIG,
         register=REG_COMMAND_REMOTE_LOCK,
         on_value=0,
         off_value=1,
