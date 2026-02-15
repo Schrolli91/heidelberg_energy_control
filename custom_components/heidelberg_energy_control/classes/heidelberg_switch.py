@@ -51,7 +51,7 @@ class HeidelbergSwitch(HeidelbergEntityBase, SwitchEntity):
             self.coordinator.async_set_updated_data(self.coordinator.data)
 
     def _guard(self) -> bool:
-        # Guard clause: Ensure register and multiplier are present
+        # Guard clause: Ensure register are present
         if self.entity_description.register is None:
             _LOGGER.error(
                 "Cannot write %s: Missing register in description",
