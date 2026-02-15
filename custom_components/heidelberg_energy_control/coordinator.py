@@ -48,12 +48,16 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
         self.versions = versions
         self.entry = entry
 
+        # Check if the hardware/firmware supports the virtual logic (min V1.0.7)
+        # This prevents locking the wallbox at 0.0A if no UI switch is available
+        self.supports_virtual_logic = self.is_supported("1.0.7", "Virtual Enable Logic")
+
         # Internal state memory for proxy logic
         self.target_current: float = 16.0
         self.logic_enabled: bool = False
         self._initial_fetch_done: bool = False
 
-        # Initialize data dictionary with default states to prevent UI flicker
+        # Initialize data dictionary
         self.data: dict[str, Any] = {
             VIRTUAL_ENABLE: False,
             VIRTUAL_TARGET_CURRENT: 16.0,
@@ -68,7 +72,11 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
             if not data:
                 return self.data
 
-            # Get the current limit directly from the hardware register
+            # If virtual logic is not supported, just return raw data (Legacy Mode)
+            if not self.supports_virtual_logic:
+                return data
+
+            # --- Virtual Logic (only for V1.0.7+) ---
             hw_current = float(data.get(COMMAND_TARGET_CURRENT, 0.0))
 
             # Initial sync on startup: Adopt the wallbox's current state
@@ -106,6 +114,10 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
 
     async def _write_current_to_wallbox(self, value: float) -> None:
         """Internal helper to write a specific Ampere value to the Modbus register."""
+        if not self.supports_virtual_logic:
+            _LOGGER.error("Firmware too old to support writing to register 261")
+            return
+
         modbus_value = int(value * 10.0)
         try:
             await self.api.async_write_register(
@@ -124,6 +136,9 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
 
     async def async_handle_switch_state_change(self, key: str, is_on: bool) -> None:
         """Handle UI requests from the virtual enable switch."""
+        if not self.supports_virtual_logic:
+            return
+
         if key == VIRTUAL_ENABLE:
             self.logic_enabled = is_on
             self.data[VIRTUAL_ENABLE] = is_on
@@ -137,6 +152,9 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
 
     async def async_handle_number_set(self, key: str, value: float) -> None:
         """Handle UI requests from the virtual target current slider."""
+        if not self.supports_virtual_logic:
+            return
+
         if key == VIRTUAL_TARGET_CURRENT:
             # Always store the new 'desired' value, even if wallbox is currently disabled
             self.target_current = value
