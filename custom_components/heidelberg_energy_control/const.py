@@ -67,5 +67,5 @@ CHARGING_STATE_MAP = {
     8: "D",
     9: "E",
     10: "F",
-    11: "Err",
+    11: "E",
 }
