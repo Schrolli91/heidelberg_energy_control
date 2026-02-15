@@ -21,6 +21,8 @@ from .const import COMMAND_REMOTE_LOCK, REG_COMMAND_REMOTE_LOCK, VIRTUAL_ENABLE
 class HeidelbergSwitchEntityDescription(SwitchEntityDescription):
     """Class describing Heidelberg switch entities."""
 
+    min_version: str | None = None
+
     # Make these optional so virtual switches don't need them
     register: int | None = None
     on_value: int = 1
@@ -36,11 +38,13 @@ SWITCH_TYPES: tuple[HeidelbergSwitchEntityDescription, ...] = (
         register=REG_COMMAND_REMOTE_LOCK,
         on_value=0,
         off_value=1,
+        min_version="1.0.4"
     ),
     HeidelbergSwitchEntityDescription(
         key=VIRTUAL_ENABLE,
         translation_key=VIRTUAL_ENABLE,
         icon="mdi:power",
+        min_version="1.0.7" # depends on COMMAND_TARGET_CURRENT
     ),
 )
 
@@ -55,9 +59,10 @@ async def async_setup_entry(
     entities: list[NumberEntity] = []
 
     for description in SWITCH_TYPES:
-        if description.key == VIRTUAL_ENABLE:
-            entities.append(HeidelbergSwitchVirtual(coordinator, entry, description))
-        else:
-            entities.append(HeidelbergSwitch(coordinator, entry, description))
+        if coordinator.is_supported(description.min_version, description.key):
+            if description.key == VIRTUAL_ENABLE:
+                entities.append(HeidelbergSwitchVirtual(coordinator, entry, description))
+            else:
+                entities.append(HeidelbergSwitch(coordinator, entry, description))
 
     async_add_entities(entities)

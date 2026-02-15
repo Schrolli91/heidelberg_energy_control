@@ -34,6 +34,10 @@ class HeidelbergEntityBase(CoordinatorEntity[HeidelbergEnergyControlCoordinator]
             name=entry.title,
             manufacturer=DEVICE_MANUFACTURER,
             model=DEVICE_MODEL,
-            hw_version=self.coordinator.versions.get("hw_version"),
-            sw_version=self.coordinator.versions.get("sw_version"),
+            model_id="Register Layout v"
+            + self.coordinator.versions.get("reg_layout_ver"),
+            hw_version="v" + self.coordinator.versions.get("hw_version"),
+            sw_version= "v" + self.coordinator.versions.get("sw_version"),
         )
+
+
