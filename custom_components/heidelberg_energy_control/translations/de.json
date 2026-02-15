@@ -62,7 +62,7 @@
       }
     },
     "number": {
-      "max_current_command": { "name": "Vorgabe Ladestrom" }
+      "virtual_current": { "name": "Vorgabe Ladestrom" }
     },
     "switch": {
       "virtual_enable": { "name": "Ladefreigabe" }
