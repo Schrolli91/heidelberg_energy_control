@@ -11,6 +11,7 @@ from pymodbus.exceptions import ModbusException
 
 from ..const import (
     CHARGING_STATE_MAP,
+    COMMAND_REMOTE_LOCK,
     COMMAND_TARGET_CURRENT,
     DATA_CHARGING_POWER,
     DATA_CHARGING_STATE,
@@ -189,10 +190,12 @@ class HeidelbergEnergyControlAPI:
                 DATA_ENERGY_SINCE_POWER_ON: self._to_32bit(data_regs, 10) / 1000.0,
                 DATA_TOTAL_ENERGY: self._to_32bit(data_regs, 12) / 1000.0,
                 # Binary Sensors
-                DATA_EXTERNAL_LOCK_STATE: data_regs[8] == 0,
+                DATA_EXTERNAL_LOCK_STATE: data_regs[8]
+                == 0,  # 0 = Locked / 1 = Unlocked
                 DATA_IS_PLUGGED: data_regs[0] >= 4,
                 DATA_IS_CHARGING: data_regs[9] > 0,
                 # COMMAND
+                COMMAND_REMOTE_LOCK: command_regs[2] == 0,  # 0 = Locked / 1 = Unlocked
                 COMMAND_TARGET_CURRENT: command_regs[4] / 10.0,
             }
 
