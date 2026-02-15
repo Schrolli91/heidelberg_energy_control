@@ -65,7 +65,7 @@
       "virtual_current": { "name": "Target Charging Current" }
     },
     "switch": {
-      "command_remote_lock": { "name": "Remote Lock" },
+      "remote_lock_command": { "name": "Remote Lock" },
       "virtual_enable": { "name": "Charge Enable" }
     }
   }
