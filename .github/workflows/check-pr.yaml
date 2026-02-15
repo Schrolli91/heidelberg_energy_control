@@ -1,4 +1,4 @@
-name: "Check PR Title"
+name: "Validate PR"
 
 on:
   pull_request:
@@ -16,3 +16,11 @@ jobs:
         with:
           task_types: '["feat","fix","perf","docs","chore","ci"]'
           add_label: 'true'
+
+  task-check:
+    name: Validate PR Tasks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: kentaro-m/task-completed-checker-action@v0.1.2
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
