@@ -52,6 +52,8 @@ _LOGGER = logging.getLogger(__name__)
 class HeidelbergSensorEntityDescription(SensorEntityDescription):
     """Class describing Heidelberg sensor entities."""
 
+    min_version: str | None = None
+
 
 SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
     HeidelbergSensorEntityDescription(
@@ -59,6 +61,7 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         translation_key=DATA_CHARGING_STATE,
         icon="mdi:ev-station",
         entity_category=EntityCategory.DIAGNOSTIC,
+        # min_version="1.1.0",
     ),
     HeidelbergSensorEntityDescription(
         key=DATA_CHARGING_POWER,
@@ -199,19 +202,20 @@ async def async_setup_entry(
     entities: list[SensorEntity] = []
 
     for description in SENSOR_TYPES:
-        if description.key == DATA_TOTAL_ENERGY:
-            entities.append(
-                HeidelbergSensorEnergyTotal(coordinator, entry, description)
-            )
-        elif description.key == DATA_SESSION_ENERGY:
-            entities.append(
-                HeidelbergSensorEnergySession(coordinator, entry, description)
-            )
-        elif description.key == DATA_PHASES_ACTIVE:
-            entities.append(
-                HeidelbergSensorActivePhases(coordinator, entry, description)
-            )
-        else:
-            entities.append(HeidelbergSensor(coordinator, entry, description))
+        if coordinator.is_supported(description.min_version, description.key):
+            if description.key == DATA_TOTAL_ENERGY:
+                entities.append(
+                    HeidelbergSensorEnergyTotal(coordinator, entry, description)
+                )
+            elif description.key == DATA_SESSION_ENERGY:
+                entities.append(
+                    HeidelbergSensorEnergySession(coordinator, entry, description)
+                )
+            elif description.key == DATA_PHASES_ACTIVE:
+                entities.append(
+                    HeidelbergSensorActivePhases(coordinator, entry, description)
+                )
+            else:
+                entities.append(HeidelbergSensor(coordinator, entry, description))
 
     async_add_entities(entities)

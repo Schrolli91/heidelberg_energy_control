@@ -6,6 +6,8 @@ from datetime import timedelta
 import logging
 from typing import Any
 
+from packaging import version
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
@@ -149,3 +151,36 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
                     value,
                 )
                 self.async_set_updated_data(self.data)
+
+    def is_supported(self, min_required: str | None, feature_name: str) -> bool:
+        """Check if the firmware version supports a specific feature."""
+
+        # Check if min_version is missing in the description
+        if min_required is None:
+            _LOGGER.warning(
+                "Feature '%s' has no min_version defined. Loading it by default, "
+                "but please check the documentation",
+                feature_name,
+            )
+            return True
+
+        try:
+            curr = version.parse(self.versions.get("reg_layout_ver"))
+            supported = curr >= version.parse(min_required)
+
+            if not supported:
+                _LOGGER.info(
+                    "Feature '%s' is not supported by your firmware. Required: %s, Found: %s",
+                    feature_name,
+                    min_required,
+                    self.versions.get("reg_layout_ver"),
+                )
+            return supported
+
+        except Exception as err:
+            _LOGGER.error(
+                "Error comparing firmware versions for feature '%s': %s",
+                feature_name,
+                err,
+            )
+            return True  # Fallback: load entity to avoid data loss

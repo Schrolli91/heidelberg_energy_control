@@ -19,6 +19,8 @@ from .const import VIRTUAL_ENABLE
 class HeidelbergSwitchEntityDescription(SwitchEntityDescription):
     """Class describing Heidelberg switch entities."""
 
+    min_version: str | None = None
+
 
 SWITCH_TYPES: tuple[HeidelbergSwitchEntityDescription, ...] = (
     HeidelbergSwitchEntityDescription(
@@ -39,10 +41,13 @@ async def async_setup_entry(
     entities: list[NumberEntity] = []
 
     for description in SWITCH_TYPES:
-        if description.key == VIRTUAL_ENABLE:
-            entities.append(HeidelbergSwitchVirtual(coordinator, entry, description))
-        else:
-            pass
-            # entities.append(HeidelbergSwitch(coordinator, entry, description))
+        if coordinator.is_supported(description.min_version, description.key):
+            if description.key == VIRTUAL_ENABLE:
+                entities.append(
+                    HeidelbergSwitchVirtual(coordinator, entry, description)
+                )
+            else:
+                pass
+                # entities.append(HeidelbergSwitch(coordinator, entry, description))
 
     async_add_entities(entities)

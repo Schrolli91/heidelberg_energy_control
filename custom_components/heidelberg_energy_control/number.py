@@ -24,6 +24,8 @@ from .const import VIRTUAL_TARGET_CURRENT
 class HeidelbergNumberEntityDescription(NumberEntityDescription):
     """Class describing Heidelberg number entities."""
 
+    min_version: str | None = None
+
     # Make these optional so virtual numbers don't need them
     register: int | None = None
     multiplier: float | None = None
@@ -53,9 +55,12 @@ async def async_setup_entry(
     entities: list[NumberEntity] = []
 
     for description in NUMBER_TYPES:
-        if description.key == VIRTUAL_TARGET_CURRENT:
-            entities.append(HeidelbergNumberVirtual(coordinator, entry, description))
-        else:
-            entities.append(HeidelbergNumber(coordinator, entry, description))
+        if coordinator.is_supported(description.min_version, description.key):
+            if description.key == VIRTUAL_TARGET_CURRENT:
+                entities.append(
+                    HeidelbergNumberVirtual(coordinator, entry, description)
+                )
+            else:
+                entities.append(HeidelbergNumber(coordinator, entry, description))
 
     async_add_entities(entities)

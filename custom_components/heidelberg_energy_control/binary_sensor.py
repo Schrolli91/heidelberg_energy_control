@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
+    BinarySensorEntity,
     BinarySensorEntityDescription,
 )
 from homeassistant.const import EntityCategory
@@ -20,6 +21,8 @@ from .const import DATA_EXTERNAL_LOCK_STATE, DATA_IS_CHARGING, DATA_IS_PLUGGED
 @dataclass(frozen=True, kw_only=True)
 class HeidelbergBinarySensorEntityDescription(BinarySensorEntityDescription):
     """Class describing Heidelberg binary sensor entities."""
+
+    min_version: str | None = None
 
 
 BINARY_SENSOR_TYPES: tuple[HeidelbergBinarySensorEntityDescription, ...] = (
@@ -49,7 +52,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up the binary sensor platform."""
     coordinator = entry.runtime_data
-    async_add_entities(
-        HeidelbergBinarySensor(coordinator, entry, description)
-        for description in BINARY_SENSOR_TYPES
-    )
+    entities: list[BinarySensorEntity] = []
+
+    for description in BINARY_SENSOR_TYPES:
+        if coordinator.is_supported(description.min_version, description.key):
+            entities.append(HeidelbergBinarySensor(coordinator, entry, description))
+
+    async_add_entities(entities)
