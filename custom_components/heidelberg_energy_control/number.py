@@ -41,6 +41,7 @@ NUMBER_TYPES: tuple[HeidelbergNumberEntityDescription, ...] = (
         device_class=NumberDeviceClass.CURRENT,
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         mode=NumberMode.BOX,
+        min_version="1.0.7" # depends on COMMAND_TARGET_CURRENT
     ),
 )
 

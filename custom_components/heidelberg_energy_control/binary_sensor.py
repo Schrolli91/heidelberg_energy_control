@@ -31,16 +31,19 @@ BINARY_SENSOR_TYPES: tuple[HeidelbergBinarySensorEntityDescription, ...] = (
         translation_key=DATA_EXTERNAL_LOCK_STATE,
         device_class=BinarySensorDeviceClass.SAFETY,
         entity_category=EntityCategory.DIAGNOSTIC,
+        min_version="1.0.0"
     ),
     HeidelbergBinarySensorEntityDescription(
         key=DATA_IS_PLUGGED,
         translation_key=DATA_IS_PLUGGED,
         device_class=BinarySensorDeviceClass.PLUG,
+        min_version="1.0.0" # depends on chargingstate sensor
     ),
     HeidelbergBinarySensorEntityDescription(
         key=DATA_IS_CHARGING,
         translation_key=DATA_IS_CHARGING,
         device_class=BinarySensorDeviceClass.BATTERY_CHARGING,
+        min_version="1.0.0" # depends on chargingstate sensor
     ),
 )
 

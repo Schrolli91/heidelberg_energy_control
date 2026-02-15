@@ -38,11 +38,13 @@ SWITCH_TYPES: tuple[HeidelbergSwitchEntityDescription, ...] = (
         register=REG_COMMAND_REMOTE_LOCK,
         on_value=0,
         off_value=1,
+        min_version="1.0.4"
     ),
     HeidelbergSwitchEntityDescription(
         key=VIRTUAL_ENABLE,
         translation_key=VIRTUAL_ENABLE,
         icon="mdi:power",
+        min_version="1.0.7" # depends on COMMAND_TARGET_CURRENT
     ),
 )
 
