@@ -65,6 +65,7 @@
       "virtual_current": { "name": "Vorgabe Ladestrom" }
     },
     "switch": {
+      "command_remote_lock": { "name": "Wallbox sperren" },
       "virtual_enable": { "name": "Ladefreigabe" }
     }
   }
