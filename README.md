@@ -5,6 +5,8 @@ This integration allows you to monitor and control your **Heidelberg Energy Cont
 ## Overview
 The Heidelberg Energy Control wallbox supports the Modbus RTU protocol for external control. Since Home Assistant communicates over your network, a **Modbus TCP to RTU gateway** (like a PE11 or similar) is typically required to bridge the connection unless your wallbox is equipped with a native network interface.
 
+Fully compatible with the evcc home assitant charger.
+
 ## Installation via HACS
 This integration is part of the **HACS Default Store**. To install it:
 
@@ -56,6 +58,7 @@ This integration provides a comprehensive set of entities to monitor and control
 #### 🏠 Local Control
 * **No Cloud Required**: Works completely offline via your local network.
 * **Fast Updates**: Direct communication via Modbus TCP for near real-time data.
+* **EVCC Compatible**: Integrates seamless with the evcc home assitant charger.
 
 ## Disclaimer
 **This is a private, community-driven project. It is NOT an official integration from Heidelberg (Amperfied).**
