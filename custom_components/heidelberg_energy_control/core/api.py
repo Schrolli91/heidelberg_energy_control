@@ -34,6 +34,7 @@ from ..const import (
     REG_DATA_START,
     REG_HW_COUNT,
     REG_HW_START,
+    REG_LAYOUT,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -67,19 +68,28 @@ class HeidelbergEnergyControlAPI:
     async def test_connection(self) -> dict[str, str] | None:
         """Test connection and return versions if successful."""
         try:
-            result = await self._client.read_input_registers(
+            layout_result = await self._client.read_input_registers(
+                address=REG_LAYOUT,
+                count=1,
+                device_id=self._device_id,
+            )
+            version_result = await self._client.read_input_registers(
                 address=REG_HW_START,
                 count=REG_HW_COUNT,
                 device_id=self._device_id,
             )
-
-            if result.isError():
+            if layout_result.isError():
+                return None
+            if version_result.isError():
                 return None
 
-            regs = result.registers
+            layout_regs = layout_result.registers
+            version_regs = version_result.registers
             return {
-                "hw_version": f"{regs[0]}",
-                "sw_version": f"{regs[3]}",
+                # "reg_layout_ver_raw": f"{layout_regs[0]}",
+                "reg_layout_ver": self._register_to_version(layout_regs[0]),
+                "hw_version": self._register_to_version(version_regs[0]),
+                "sw_version": self._register_to_version(version_regs[3]),
             }
         except Exception:
             return None
@@ -206,3 +216,11 @@ class HeidelbergEnergyControlAPI:
             return (regs[idx_high] << 16) | regs[idx_high + 1]
         except IndexError:
             return 0
+
+    def _register_to_version(self, decimal_value: int) -> str:
+        h = hex(decimal_value)[2:]
+        h = h.zfill(3)
+        patch = int(h[-1], 16)
+        minor = int(h[-2], 16)
+        major = int(h[:-2], 16)
+        return f"{major}.{minor}.{patch}"

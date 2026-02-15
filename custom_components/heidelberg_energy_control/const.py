@@ -49,6 +49,7 @@ VIRTUAL_ENABLE = "virtual_enable"
 VIRTUAL_TARGET_CURRENT = "virtual_current"
 
 # ##### Modbus registers #####
+REG_LAYOUT = 4 # Modbus Register-Layouts Version
 REG_DATA_START = 5
 REG_DATA_COUNT = 14
 REG_COMMAND_START = 257
