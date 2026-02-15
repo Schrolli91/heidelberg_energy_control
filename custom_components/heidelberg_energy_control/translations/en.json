@@ -62,7 +62,7 @@
       }
     },
     "number": {
-      "max_current_command": { "name": "Target Charging Current" }
+      "virtual_current": { "name": "Target Charging Current" }
     },
     "switch": {
       "virtual_enable": { "name": "Charge Enable" }
