@@ -21,10 +21,7 @@ jobs:
   task-check:
     name: Validate PR Tasks
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-      contents: read
     steps:
-      - uses: kentaro-m/task-completed-checker-action@v0.1.2
+      - uses: venkatsarvesh/pr-tasks-completed-action@v1.0.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
