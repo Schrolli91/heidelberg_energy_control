@@ -42,6 +42,8 @@ DATA_SESSION_ENERGY = "session_energy"
 DATA_IS_PLUGGED = "is_plugged"
 DATA_IS_CHARGING = "is_charging"
 # Hardware Command
+COMMAND_REMOTE_LOCK = "remote_lock_command"
+REG_COMMAND_REMOTE_LOCK = 259
 COMMAND_TARGET_CURRENT = "max_current_command"
 REG_COMMAND_TARGET_CURRENT = 261
 # Virtual

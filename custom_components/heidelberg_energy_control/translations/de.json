@@ -65,6 +65,7 @@
       "virtual_current": { "name": "Vorgabe Ladestrom" }
     },
     "switch": {
+      "remote_lock_command": { "name": "Remote Lock" },
       "virtual_enable": { "name": "Ladefreigabe" }
     }
   }
