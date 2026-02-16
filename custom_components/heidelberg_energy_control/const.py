@@ -22,6 +22,12 @@ PLATFORMS: list[Platform] = [
 ]
 
 # ##### Data Keys #####
+# Init Data
+DATA_REG_LAYOUT_VER = "reg_layout_ver"
+DATA_HW_VERSION = "hw_version"
+DATA_SW_VERSION = "sw_version"
+DATA_HW_MAX_CURR = "hw_max_current"
+DATA_HW_FAILSAFE_CURR = "hw_failsafe_current"
 # Sensors
 DATA_CHARGING_STATE = "charging_state"
 DATA_CHARGING_POWER = "charging_power"
@@ -51,13 +57,19 @@ VIRTUAL_ENABLE = "virtual_enable"
 VIRTUAL_TARGET_CURRENT = "virtual_current"
 
 # ##### Modbus registers #####
-REG_LAYOUT = 4 # Modbus Register-Layouts Version
+# Modbus Register-Layouts Version (length 1)
+REG_LAYOUT = 4
+# Modbus Register for wallbox sensors
 REG_DATA_START = 5
 REG_DATA_COUNT = 14
-REG_COMMAND_START = 257
-REG_COMMAND_COUNT = 6
+# Modbus Register for hw current settings (length 2)
+REG_HW_CURR_START = 100
+# Modbus Register for hw/sw version
 REG_HW_START = 200
 REG_HW_COUNT = 4
+# Modbus Register for control
+REG_COMMAND_START = 257
+REG_COMMAND_COUNT = 6
 
 # ##### Map for charging state #####
 CHARGING_STATE_MAP = {

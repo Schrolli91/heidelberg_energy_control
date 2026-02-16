@@ -45,7 +45,9 @@
       "voltage_l2": { "name": "Voltage L2" },
       "voltage_l3": { "name": "Voltage L3" },
       "pcb_temperature": { "name": "Housing temperature" },
-      "max_current_command": { "name": "Hardware Current Limit" }
+      "max_current_command": { "name": "Requested Current" },
+      "hw_max_current": { "name": "Configured Max. Current" },
+      "hw_failsafe_current": { "name": "Configured Failsafe Current" }
     },
     "binary_sensor": {
       "external_lock_state": {
