@@ -1,12 +1,12 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![GitHub Release](https://img.shields.io/github/v/release/Schrolli91/heidelberg_energy_control?style=flat-square)](https://github.com/Schrolli91/heidelberg_energy_control/releases)
-[![License](https://img.shields.io/github/license/Schrolli91/heidelberg_energy_control?style=flat-square)](LICENSE)
+[![License](https://img.shields.io/github/license/Schrolli91/heidelberg_energy_control?style=flat-square)](https://github.com/Schrolli91/heidelberg_energy_control/blob/main/LICENSE)
 [![Maintenance](https://img.shields.io/badge/maintained-yes-brightgreen.svg)](https://github.com/Schrolli91/heidelberg_energy_control/graphs/commit-activity)
 [![GitHub Last Commit](https://img.shields.io/github/last-commit/Schrolli91/heidelberg_energy_control?style=flat-square)](https://github.com/Schrolli91/heidelberg_energy_control/commits/main)
 
 # Heidelberg Energy Control for Home Assistant
 
-![Heidelberg](banner.png)
+![Heidelberg](https://github.com/Schrolli91/heidelberg_energy_control/blob/main/banner.png?raw=true)
 
 This integration allows you to monitor and control your **Heidelberg Energy Control** wallbox in Home Assistant via Modbus TCP.
 
@@ -66,7 +66,7 @@ This integration provides a comprehensive set of entities to monitor and control
 
 #### 🏠 Local Control
 * **No Cloud Required**: Works completely offline via your local network.
-* **Fast Updates**: Direct communication via Modbus TCP for near real-time data.
+* **Fast Updates**: Direct communication via Modbus TCP for near real-time data (Configurable update interval).
 * **EVCC Compatible**: Integrates seamless with the evcc home assitant charger.
 
 ## Disclaimer
