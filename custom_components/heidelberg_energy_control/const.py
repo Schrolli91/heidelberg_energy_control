@@ -26,8 +26,8 @@ PLATFORMS: list[Platform] = [
 DATA_REG_LAYOUT_VER = "reg_layout_ver"
 DATA_HW_VERSION = "hw_version"
 DATA_SW_VERSION = "sw_version"
+DATA_HW_MIN_CURR = "hw_min_current"
 DATA_HW_MAX_CURR = "hw_max_current"
-DATA_HW_FAILSAFE_CURR = "hw_failsafe_current"
 # Sensors
 DATA_CHARGING_STATE = "charging_state"
 DATA_CHARGING_POWER = "charging_power"

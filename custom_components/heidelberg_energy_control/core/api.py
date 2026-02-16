@@ -21,7 +21,7 @@ from ..const import (
     DATA_CURRENT_L3,
     DATA_ENERGY_SINCE_POWER_ON,
     DATA_EXTERNAL_LOCK_STATE,
-    DATA_HW_FAILSAFE_CURR,
+    DATA_HW_MIN_CURR,
     DATA_HW_MAX_CURR,
     DATA_HW_VERSION,
     DATA_IS_CHARGING,
@@ -105,7 +105,7 @@ class HeidelbergEnergyControlAPI:
                 DATA_HW_VERSION: self._register_to_version(version_regs[0]),
                 DATA_SW_VERSION: self._register_to_version(version_regs[3]),
                 DATA_HW_MAX_CURR: hw_curr_regs[0],
-                DATA_HW_FAILSAFE_CURR: hw_curr_regs[1],
+                DATA_HW_MIN_CURR: hw_curr_regs[1],
             }
         except Exception:
             return None

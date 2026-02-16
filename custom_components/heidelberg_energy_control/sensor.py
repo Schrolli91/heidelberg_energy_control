@@ -37,7 +37,7 @@ from .const import (
     DATA_CURRENT_L2,
     DATA_CURRENT_L3,
     DATA_ENERGY_SINCE_POWER_ON,
-    DATA_HW_FAILSAFE_CURR,
+    DATA_HW_MIN_CURR,
     DATA_HW_MAX_CURR,
     DATA_PCB_TEMPERATURE,
     DATA_PHASES_ACTIVE,
@@ -218,8 +218,8 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         min_version="1.0.0"
     ),
     HeidelbergSensorEntityDescription(
-        key=DATA_HW_FAILSAFE_CURR,
-        translation_key=DATA_HW_FAILSAFE_CURR,
+        key=DATA_HW_MIN_CURR,
+        translation_key=DATA_HW_MIN_CURR,
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
@@ -254,7 +254,7 @@ async def async_setup_entry(
                 entities.append(
                     HeidelbergSensorActivePhases(coordinator, entry, description)
                 )
-            elif description.key == DATA_HW_MAX_CURR or description.key == DATA_HW_FAILSAFE_CURR:
+            elif description.key == DATA_HW_MAX_CURR or description.key == DATA_HW_MIN_CURR:
                 entities.append(
                     HeidelbergSensorCoordinator(coordinator, entry, description)
                 )
