@@ -36,7 +36,7 @@ async def async_setup_entry(
         if not await api.connect():
             raise ConfigEntryNotReady(f"Unable to connect to wallbox at {api._host}")
 
-        versions = await api.test_connection()
+        versions = await api.async_get_static_data()
         if versions is None:
             await api.disconnect()
             raise ConfigEntryNotReady(

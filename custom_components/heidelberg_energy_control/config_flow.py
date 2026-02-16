@@ -46,7 +46,7 @@ async def validate_input(data: dict[str, Any]) -> dict[str, Any]:
         if not await api.connect():
             raise CannotConnect
 
-        versions = await api.test_connection()
+        versions = await api.async_get_static_data()
         await api.disconnect()
 
         if versions is None:

@@ -72,8 +72,8 @@ class HeidelbergEnergyControlAPI:
         if self._client.connected:
             self._client.close()
 
-    async def test_connection(self) -> dict[str, str] | None:
-        """Test connection and return versions if successful."""
+    async def async_get_static_data(self) -> dict[str, str] | None:
+        """Read the static data and return if successful."""
         try:
             layout_result = await self._client.read_input_registers(
                 address=REG_LAYOUT,
