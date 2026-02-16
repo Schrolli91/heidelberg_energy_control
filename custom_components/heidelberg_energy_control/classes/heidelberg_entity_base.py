@@ -8,7 +8,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .. import HeidelbergEnergyControlConfigEntry
-from ..const import DEVICE_MANUFACTURER, DEVICE_MODEL, DOMAIN
+from ..const import DATA_HW_VERSION, DATA_REG_LAYOUT_VER, DATA_SW_VERSION, DEVICE_MANUFACTURER, DEVICE_MODEL, DOMAIN
 from ..coordinator import HeidelbergEnergyControlCoordinator
 
 
@@ -35,9 +35,9 @@ class HeidelbergEntityBase(CoordinatorEntity[HeidelbergEnergyControlCoordinator]
             manufacturer=DEVICE_MANUFACTURER,
             model=DEVICE_MODEL,
             model_id="Register Layout v"
-            + self.coordinator.versions.get("reg_layout_ver"),
-            hw_version="v" + self.coordinator.versions.get("hw_version"),
-            sw_version= "v" + self.coordinator.versions.get("sw_version"),
+            + self.coordinator.versions.get(DATA_REG_LAYOUT_VER),
+            hw_version="v" + self.coordinator.versions.get(DATA_HW_VERSION),
+            sw_version= "v" + self.coordinator.versions.get(DATA_SW_VERSION),
         )
 
 
