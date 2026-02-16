@@ -36,11 +36,11 @@ async def async_setup_entry(
         if not await api.connect():
             raise ConfigEntryNotReady(f"Unable to connect to wallbox at {api._host}")
 
-        versions = await api.async_get_static_data()
-        if versions is None:
+        static_data = await api.async_get_static_data()
+        if static_data is None:
             await api.disconnect()
             raise ConfigEntryNotReady(
-                "Wallbox connected but did not respond to version/diagnostic requests"
+                "Wallbox connected but did not respond to requests"
             )
 
     except Exception as err:
@@ -49,7 +49,7 @@ async def async_setup_entry(
         raise ConfigEntryNotReady(f"Error communicating with wallbox: {err}") from err
 
     coordinator = HeidelbergEnergyControlCoordinator(
-        hass=hass, api=api, versions=versions, entry=entry
+        hass=hass, api=api, static_data=static_data, entry=entry
     )
 
     await coordinator.async_config_entry_first_refresh()

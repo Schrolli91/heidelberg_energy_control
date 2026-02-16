@@ -12,6 +12,6 @@ class HeidelbergSensorCoordinator(HeidelbergEntityBase, SensorEntity):
     @property
     def native_value(self) -> Any:
         """Return value from coordinator."""
-        if not self.coordinator.versions:
+        if not self.coordinator.static_data:
             return None
-        return self.coordinator.versions.get(self.entity_description.key)
+        return self.coordinator.static_data.get(self.entity_description.key)
