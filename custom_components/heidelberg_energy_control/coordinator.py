@@ -15,6 +15,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import (
     COMMAND_TARGET_CURRENT,
+    DATA_REG_LAYOUT_VER,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     REG_COMMAND_TARGET_CURRENT,
@@ -32,7 +33,7 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
         self,
         hass: HomeAssistant,
         api: Any,
-        versions: dict[str, str],
+        static_data: dict[str, str],
         entry: ConfigEntry,
     ) -> None:
         """Initialize the coordinator."""
@@ -45,7 +46,7 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
             update_interval=timedelta(seconds=scan_interval),
         )
         self.api = api
-        self.versions = versions
+        self.static_data = static_data
         self.entry = entry
 
         # Check if the hardware/firmware supports the virtual logic (min V1.0.7)
@@ -183,7 +184,7 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
             return True
 
         try:
-            curr = version.parse(self.versions.get("reg_layout_ver"))
+            curr = version.parse(self.static_data.get(DATA_REG_LAYOUT_VER))
             supported = curr >= version.parse(min_required)
 
             if not supported:
@@ -191,7 +192,7 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
                     "Feature '%s' is not supported by your firmware. Required: %s, Found: %s",
                     feature_name,
                     min_required,
-                    self.versions.get("reg_layout_ver"),
+                    self.static_data.get(DATA_REG_LAYOUT_VER),
                 )
             return supported
 

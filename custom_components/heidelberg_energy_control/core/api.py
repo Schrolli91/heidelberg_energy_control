@@ -21,10 +21,15 @@ from ..const import (
     DATA_CURRENT_L3,
     DATA_ENERGY_SINCE_POWER_ON,
     DATA_EXTERNAL_LOCK_STATE,
+    DATA_HW_MIN_CURR,
+    DATA_HW_MAX_CURR,
+    DATA_HW_VERSION,
     DATA_IS_CHARGING,
     DATA_IS_PLUGGED,
     DATA_PCB_TEMPERATURE,
     DATA_PHASES_ACTIVE,
+    DATA_REG_LAYOUT_VER,
+    DATA_SW_VERSION,
     DATA_TOTAL_ENERGY,
     DATA_VOLTAGE_L1,
     DATA_VOLTAGE_L2,
@@ -34,6 +39,7 @@ from ..const import (
     REG_DATA_COUNT,
     REG_DATA_START,
     REG_HW_COUNT,
+    REG_HW_CURR_START,
     REG_HW_START,
     REG_LAYOUT,
 )
@@ -66,8 +72,8 @@ class HeidelbergEnergyControlAPI:
         if self._client.connected:
             self._client.close()
 
-    async def test_connection(self) -> dict[str, str] | None:
-        """Test connection and return versions if successful."""
+    async def async_get_static_data(self) -> dict[str, str] | None:
+        """Read the static data and return if successful."""
         try:
             layout_result = await self._client.read_input_registers(
                 address=REG_LAYOUT,
@@ -79,18 +85,27 @@ class HeidelbergEnergyControlAPI:
                 count=REG_HW_COUNT,
                 device_id=self._device_id,
             )
+            hw_curr_result = await self._client.read_input_registers(
+                address=REG_HW_CURR_START,
+                count=2,
+                device_id=self._device_id,
+            )
             if layout_result.isError():
                 return None
             if version_result.isError():
                 return None
+            if hw_curr_result.isError():
+                return None
 
             layout_regs = layout_result.registers
             version_regs = version_result.registers
+            hw_curr_regs = hw_curr_result.registers
             return {
-                # "reg_layout_ver_raw": f"{layout_regs[0]}",
-                "reg_layout_ver": self._register_to_version(layout_regs[0]),
-                "hw_version": self._register_to_version(version_regs[0]),
-                "sw_version": self._register_to_version(version_regs[3]),
+                DATA_REG_LAYOUT_VER: self._register_to_version(layout_regs[0]),
+                DATA_HW_VERSION: self._register_to_version(version_regs[0]),
+                DATA_SW_VERSION: self._register_to_version(version_regs[3]),
+                DATA_HW_MAX_CURR: hw_curr_regs[0],
+                DATA_HW_MIN_CURR: hw_curr_regs[1],
             }
         except Exception:
             return None

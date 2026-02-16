@@ -45,7 +45,9 @@
       "voltage_l2": { "name": "Spannung L2" },
       "voltage_l3": { "name": "Spannung L3" },
       "pcb_temperature": { "name": "Gehäusetemperatur" },
-      "max_current_command": { "name": "Aktuelles Limit (Hardware)" }
+      "max_current_command": { "name": "Angeforderter Strom" },
+      "hw_min_current": { "name": "Eingestellter Minimal Strom" },
+      "hw_max_current": { "name": "Eingestellter Maximal Strom" }
     },
     "binary_sensor": {
       "external_lock_state": {

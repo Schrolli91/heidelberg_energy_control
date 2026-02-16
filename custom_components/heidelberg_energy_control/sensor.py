@@ -25,6 +25,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import HeidelbergEnergyControlConfigEntry
 from .classes.heidelberg_sensor import HeidelbergSensor
 from .classes.heidelberg_sensor_active_phases import HeidelbergSensorActivePhases
+from .classes.heidelberg_sensor_coordinator import HeidelbergSensorCoordinator
 from .classes.heidelberg_sensor_energy_session import HeidelbergSensorEnergySession
 from .classes.heidelberg_sensor_energy_total import HeidelbergSensorEnergyTotal
 from .const import (
@@ -36,6 +37,8 @@ from .const import (
     DATA_CURRENT_L2,
     DATA_CURRENT_L3,
     DATA_ENERGY_SINCE_POWER_ON,
+    DATA_HW_MIN_CURR,
+    DATA_HW_MAX_CURR,
     DATA_PCB_TEMPERATURE,
     DATA_PHASES_ACTIVE,
     DATA_SESSION_ENERGY,
@@ -203,6 +206,28 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         suggested_display_precision=1,
         min_version="1.0.7"
     ),
+    HeidelbergSensorEntityDescription(
+        key=DATA_HW_MAX_CURR,
+        translation_key=DATA_HW_MAX_CURR,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=1,
+        entity_registry_enabled_default=False,
+        min_version="1.0.0"
+    ),
+    HeidelbergSensorEntityDescription(
+        key=DATA_HW_MIN_CURR,
+        translation_key=DATA_HW_MIN_CURR,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        suggested_display_precision=1,
+        entity_registry_enabled_default=False,
+        min_version="1.0.0"
+    ),
 )
 
 
@@ -228,6 +253,10 @@ async def async_setup_entry(
             elif description.key == DATA_PHASES_ACTIVE:
                 entities.append(
                     HeidelbergSensorActivePhases(coordinator, entry, description)
+                )
+            elif description.key == DATA_HW_MAX_CURR or description.key == DATA_HW_MIN_CURR:
+                entities.append(
+                    HeidelbergSensorCoordinator(coordinator, entry, description)
                 )
             else:
                 entities.append(HeidelbergSensor(coordinator, entry, description))
