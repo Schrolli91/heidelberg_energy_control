@@ -15,6 +15,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import (
     COMMAND_TARGET_CURRENT,
+    DATA_REG_LAYOUT_VER,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     REG_COMMAND_TARGET_CURRENT,
@@ -183,7 +184,7 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
             return True
 
         try:
-            curr = version.parse(self.versions.get("reg_layout_ver"))
+            curr = version.parse(self.versions.get(DATA_REG_LAYOUT_VER))
             supported = curr >= version.parse(min_required)
 
             if not supported:
@@ -191,7 +192,7 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
                     "Feature '%s' is not supported by your firmware. Required: %s, Found: %s",
                     feature_name,
                     min_required,
-                    self.versions.get("reg_layout_ver"),
+                    self.versions.get(DATA_REG_LAYOUT_VER),
                 )
             return supported
 
