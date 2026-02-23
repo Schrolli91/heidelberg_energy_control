@@ -12,7 +12,7 @@ from .const import PLATFORMS
 from .coordinator import HeidelbergEnergyControlCoordinator
 from .core.api import HeidelbergEnergyControlAPI
 
-_LOGGER = logging.getLogger(__name__)
+# _LOGGER = logging.getLogger(__name__)
 
 type HeidelbergEnergyControlConfigEntry = ConfigEntry[
     HeidelbergEnergyControlCoordinator
