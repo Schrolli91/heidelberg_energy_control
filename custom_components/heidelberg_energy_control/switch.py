@@ -5,8 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from homeassistant.components.number import NumberEntity
-from homeassistant.components.switch import SwitchEntityDescription
+from homeassistant.components.switch import SwitchEntity, SwitchEntityDescription
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -56,7 +55,7 @@ async def async_setup_entry(
 ) -> None:
     """Set up the switch platform."""
     coordinator = entry.runtime_data
-    entities: list[NumberEntity] = []
+    entities: list[SwitchEntity] = []
 
     for description in SWITCH_TYPES:
         if coordinator.is_supported(description.min_version, description.key):
