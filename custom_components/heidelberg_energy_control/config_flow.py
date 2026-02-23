@@ -73,7 +73,7 @@ class HeidelbergEnergyControlConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            await self.async_set_unique_id(user_input[CONF_HOST])
+            await self.async_set_unique_id(f"{user_input[CONF_HOST]}-{user_input[CONF_DEVICE_ID]}")
             self._abort_if_unique_id_configured()
 
             try:
@@ -125,7 +125,7 @@ class HeidelbergOptionsFlowHandler(OptionsFlow):
                             max=30,
                             step=1,
                             unit_of_measurement="s",
-                            mode=selector.NumberSelectorMode.BOX,  # BOX macht ein sauberes Eingabefeld statt Schieberegler
+                            mode=selector.NumberSelectorMode.BOX,
                         ),
                     ),
                 }

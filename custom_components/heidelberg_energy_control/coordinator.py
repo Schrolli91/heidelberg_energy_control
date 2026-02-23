@@ -150,6 +150,8 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
 
             # Trigger immediate UI refresh
             self.async_set_updated_data(self.data)
+        else:
+            _LOGGER.warning("Unknown key '%s' in switch state change handler", key)
 
     async def async_handle_number_set(self, key: str, value: float) -> None:
         """Handle UI requests from the virtual target current slider."""
@@ -170,6 +172,8 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
                     value,
                 )
                 self.async_set_updated_data(self.data)
+        else:
+            _LOGGER.warning("Unknown key '%s' in number set handler", key)
 
     def is_supported(self, min_required: str | None, feature_name: str) -> bool:
         """Check if the firmware version supports a specific feature."""
@@ -184,7 +188,14 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
             return True
 
         try:
-            curr = version.parse(self.static_data.get(DATA_REG_LAYOUT_VER))
+            curr_str = self.static_data.get(DATA_REG_LAYOUT_VER)
+            if curr_str is None:
+                _LOGGER.warning(
+                    "Firmware version not found in static data for feature '%s'. Assuming compatibility.",
+                    feature_name,
+                )
+                return True
+            curr = version.parse(curr_str)
             supported = curr >= version.parse(min_required)
 
             if not supported:
