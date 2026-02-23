@@ -72,6 +72,7 @@ REG_COMMAND_START = 257
 REG_COMMAND_COUNT = 6
 
 # ##### Map for charging state #####
+# Values from the heidelberg modbus docs
 CHARGING_STATE_MAP = {
     2: "A",
     3: "A",
