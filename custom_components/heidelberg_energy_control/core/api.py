@@ -8,6 +8,7 @@ from typing import Any
 
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
+from pymodbus.transport import ModbusProtocol
 
 from ..const import (
     CHARGING_STATE_MAP,
@@ -55,7 +56,12 @@ class HeidelbergEnergyControlAPI:
         self._host = host
         self._port = port
         self._device_id = device_id
-        self._client = AsyncModbusTcpClient(host, port=port)
+        self._client = AsyncModbusTcpClient(
+            host,
+            port=port,
+            timeout=5,
+            protocol=ModbusProtocol(use_syn=False),
+        )
 
     async def connect(self) -> bool:
         """Connect to the wallbox."""
@@ -173,13 +179,13 @@ class HeidelbergEnergyControlAPI:
             data_regs = data.registers
             command_regs = command.registers
 
-            if len(data_regs) < REG_DATA_COUNT:
-                _LOGGER.warning("Data Register incomplete (got: %s)", len(data_regs))
+            if data_regs is None or len(data_regs) < REG_DATA_COUNT:
+                _LOGGER.warning("Data Register incomplete (got: %s)", len(data_regs) if data_regs else 0)
                 return {}
 
-            if len(command_regs) < REG_COMMAND_COUNT:
+            if command_regs is None or len(command_regs) < REG_COMMAND_COUNT:
                 _LOGGER.warning(
-                    "Command Register incomplete (got: %s)", len(command_regs)
+                    "Command Register incomplete (got: %s)", len(command_regs) if command_regs else 0
                 )
                 return {}
 

@@ -15,6 +15,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 
 from .const import (
     COMMAND_TARGET_CURRENT,
+    DATA_HW_MAX_CURR,
     DATA_REG_LAYOUT_VER,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
@@ -53,15 +54,19 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
         # This prevents locking the wallbox at 0.0A if no UI switch is available
         self.supports_virtual_logic = self.is_supported("1.0.7", "Virtual Enable Logic")
 
+        # Get hardware limits from static data
+        hw_max_current = float(static_data.get(DATA_HW_MAX_CURR, 16))
+        default_current = min(16.0, hw_max_current)
+
         # Internal state memory for proxy logic
-        self.target_current: float = 16.0
+        self.target_current: float = default_current
         self.logic_enabled: bool = False
         self._initial_fetch_done: bool = False
 
         # Initialize data dictionary
         self.data: dict[str, Any] = {
             VIRTUAL_ENABLE: False,
-            VIRTUAL_TARGET_CURRENT: 16.0,
+            VIRTUAL_TARGET_CURRENT: default_current,
             COMMAND_TARGET_CURRENT: 0.0,
         }
 
@@ -126,9 +131,8 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
                 REG_COMMAND_TARGET_CURRENT, modbus_value
             )
 
-            # Optimistic UI update: Update hardware sensor state immediately in data map
             self.data[COMMAND_TARGET_CURRENT] = value
-            self.async_set_updated_data(self.data)
+            self.async_update_listeners()
         except Exception as err:
             _LOGGER.error(
                 "Failed to write to wallbox register %s: %s",
@@ -149,8 +153,7 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
             current_to_write = self.target_current if is_on else 0.0
             await self._write_current_to_wallbox(current_to_write)
 
-            # Trigger immediate UI refresh
-            self.async_set_updated_data(self.data)
+            self.async_update_listeners()
         else:
             _LOGGER.warning("Unknown key '%s' in switch state change handler", key)
 
@@ -172,7 +175,7 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
                     "Stored new target %sA, hardware remains at 0.0A until enabled",
                     value,
                 )
-                self.async_set_updated_data(self.data)
+                self.async_update_listeners()
         else:
             _LOGGER.warning("Unknown key '%s' in number set handler", key)
 
