@@ -71,6 +71,7 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
             # Fetch all registers from the wallbox via Modbus API
             data = await self.api.async_get_data()
             if not data:
+                _LOGGER.warning("Empty data response from wallbox, keeping previous state")
                 return self.data
 
             # If virtual logic is not supported, just return raw data (Legacy Mode)
@@ -80,7 +81,7 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
             # --- Virtual Logic (only for V1.0.7+) ---
             hw_current = float(data.get(COMMAND_TARGET_CURRENT, 0.0))
 
-            # Initial sync on startup: Adopt the wallbox's current state
+            # Initial sync on startup: Read wallbox current state
             if not self._initial_fetch_done:
                 if hw_current > 0:
                     self.target_current = hw_current

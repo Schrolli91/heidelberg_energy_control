@@ -22,7 +22,7 @@ class HeidelbergSwitch(HeidelbergEntityBase, SwitchEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Forward turn_on request to coordinator."""
-        if not self._guard:
+        if not self._guard():
             return
 
         # Write to the physical register via API
@@ -37,7 +37,7 @@ class HeidelbergSwitch(HeidelbergEntityBase, SwitchEntity):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         """Forward turn_off request to coordinator."""
-        if not self._guard:
+        if not self._guard():
             return
 
         # Write to the physical register via API

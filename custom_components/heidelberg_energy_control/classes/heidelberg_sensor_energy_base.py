@@ -25,8 +25,12 @@ class HeidelbergSensorEnergyBase(HeidelbergEntityBase, RestoreEntity, SensorEnti
         """Restore internal tracking values on startup."""
         await super().async_added_to_hass()
         if (last_state := await self.async_get_last_state()) is not None:
-            self._total_offset = last_state.attributes.get("_total_offset", 0.0)
-            self._last_raw_value = last_state.attributes.get("_last_raw_value")
+            offset_val = last_state.attributes.get("_total_offset")
+            self._total_offset = float(offset_val) if offset_val is not None else 0.0
+
+            raw_val = last_state.attributes.get("_last_raw_value")
+            self._last_raw_value = float(raw_val) if raw_val is not None else None
+
             try:
                 self._attr_native_value = float(last_state.state)
             except (ValueError, TypeError) as _:

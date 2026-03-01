@@ -136,7 +136,7 @@ class HeidelbergEnergyControlAPI:
 
             return True
         except Exception as err:
-            _LOGGER.error("Errnr on writing Register %s: %s", address, err)
+            _LOGGER.error("Error on writing Register %s: %s", address, err)
             return False
 
     async def async_get_data(self) -> dict[str, Any]:
@@ -232,9 +232,17 @@ class HeidelbergEnergyControlAPI:
 
     def _to_32bit(self, regs: list[int], idx_high: int) -> int:
         """Helper to combine two 16-bit registers to 32-bit."""
+        if idx_high + 1 >= len(regs):
+            _LOGGER.error(
+                "Index out of bounds for 32-bit conversion: idx=%s, regs_len=%s",
+                idx_high,
+                len(regs),
+            )
+            return 0
         try:
             return (regs[idx_high] << 16) | regs[idx_high + 1]
-        except IndexError:
+        except Exception as err:
+            _LOGGER.error("Error converting registers to 32-bit: %s", err)
             return 0
 
     def _register_to_version(self, decimal_value: int) -> str:
