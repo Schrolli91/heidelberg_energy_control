@@ -197,13 +197,15 @@ class HeidelbergEnergyControlAPI:
 
             active_phases = sum(1 for i in [curr_l1, curr_l2, curr_l3] if i > 0.1)
 
+            charge_current = round((curr_l1+curr_l2+curr_l3)/max(1, active_phases),2)
+
             return {
                 # DATA
                 DATA_CHARGING_STATE: CHARGING_STATE_MAP.get(
                     data_regs[0], f"Unknown ({data_regs[0]})"
                 ),
                 DATA_PHASES_ACTIVE: active_phases,
-                DATA_CURRENT: round(curr_l1 + curr_l2 + curr_l3, 2),
+                DATA_CURRENT: charge_current,
                 DATA_CURRENT_L1: curr_l1,
                 DATA_CURRENT_L2: curr_l2,
                 DATA_CURRENT_L3: curr_l3,
