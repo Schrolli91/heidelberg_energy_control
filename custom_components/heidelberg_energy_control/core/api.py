@@ -8,6 +8,7 @@ from typing import Any
 
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
+from pymodbus.transport import ModbusProtocol
 
 from ..const import (
     CHARGING_STATE_MAP,
@@ -55,7 +56,12 @@ class HeidelbergEnergyControlAPI:
         self._host = host
         self._port = port
         self._device_id = device_id
-        self._client = AsyncModbusTcpClient(host, port=port)
+        self._client = AsyncModbusTcpClient(
+            host,
+            port=port,
+            timeout=5,
+            protocol=ModbusProtocol(use_syn=False),
+        )
 
     async def connect(self) -> bool:
         """Connect to the wallbox."""
@@ -136,7 +142,7 @@ class HeidelbergEnergyControlAPI:
 
             return True
         except Exception as err:
-            _LOGGER.error("Errnr on writing Register %s: %s", address, err)
+            _LOGGER.error("Error on writing Register %s: %s", address, err)
             return False
 
     async def async_get_data(self) -> dict[str, Any]:
@@ -173,13 +179,13 @@ class HeidelbergEnergyControlAPI:
             data_regs = data.registers
             command_regs = command.registers
 
-            if len(data_regs) < REG_DATA_COUNT:
-                _LOGGER.warning("Data Register incomplete (got: %s)", len(data_regs))
+            if data_regs is None or len(data_regs) < REG_DATA_COUNT:
+                _LOGGER.warning("Data Register incomplete (got: %s)", len(data_regs) if data_regs else 0)
                 return {}
 
-            if len(command_regs) < REG_COMMAND_COUNT:
+            if command_regs is None or len(command_regs) < REG_COMMAND_COUNT:
                 _LOGGER.warning(
-                    "Command Register incomplete (got: %s)", len(command_regs)
+                    "Command Register incomplete (got: %s)", len(command_regs) if command_regs else 0
                 )
                 return {}
 
@@ -232,9 +238,17 @@ class HeidelbergEnergyControlAPI:
 
     def _to_32bit(self, regs: list[int], idx_high: int) -> int:
         """Helper to combine two 16-bit registers to 32-bit."""
+        if idx_high + 1 >= len(regs):
+            _LOGGER.error(
+                "Index out of bounds for 32-bit conversion: idx=%s, regs_len=%s",
+                idx_high,
+                len(regs),
+            )
+            return 0
         try:
             return (regs[idx_high] << 16) | regs[idx_high + 1]
-        except IndexError:
+        except Exception as err:
+            _LOGGER.error("Error converting registers to 32-bit: %s", err)
             return 0
 
     def _register_to_version(self, decimal_value: int) -> str:

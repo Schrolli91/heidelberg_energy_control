@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from homeassistant.components.number import (
     NumberDeviceClass,
@@ -17,7 +17,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import HeidelbergEnergyControlConfigEntry
 from .classes.heidelberg_number import HeidelbergNumber
 from .classes.heidelberg_number_virtual import HeidelbergNumberVirtual
-from .const import VIRTUAL_TARGET_CURRENT
+from .const import DATA_HW_MAX_CURR, VIRTUAL_TARGET_CURRENT
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -58,6 +58,8 @@ async def async_setup_entry(
     for description in NUMBER_TYPES:
         if coordinator.is_supported(description.min_version, description.key):
             if description.key == VIRTUAL_TARGET_CURRENT:
+                hw_max_current = float(coordinator.static_data.get(DATA_HW_MAX_CURR, 16))
+                description = replace(description, native_max_value=hw_max_current)
                 entities.append(
                     HeidelbergNumberVirtual(coordinator, entry, description)
                 )
