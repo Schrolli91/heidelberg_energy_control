@@ -8,7 +8,6 @@ from typing import Any
 
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
-from pymodbus.transport import ModbusProtocol
 
 from ..const import (
     CHARGING_STATE_MAP,
@@ -60,7 +59,6 @@ class HeidelbergEnergyControlAPI:
             host,
             port=port,
             timeout=5,
-            protocol=ModbusProtocol(use_syn=False),
         )
 
     async def connect(self) -> bool:
