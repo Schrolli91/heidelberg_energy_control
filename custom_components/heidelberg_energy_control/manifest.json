@@ -5,6 +5,7 @@
     "@Schrolli91"
   ],
   "config_flow": true,
+  "dependencies": ["homeassistant"],
   "documentation": "https://github.com/Schrolli91/heidelberg_energy_control",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/Schrolli91/heidelberg_energy_control/issues",

@@ -7,6 +7,12 @@
           "host": "Host",
           "port": "Port",
           "device_id": "Device ID"
+        },
+        "data_description": {
+          "name": "Custom name for your wallbox",
+          "host": "IP address of your Modbus TCP gateway",
+          "port": "Port of your Modbus TCP gateway (default: 502)",
+          "device_id": "Modbus Slave ID of your wallbox (default: 1)"
         }
       }
     },
@@ -25,7 +31,9 @@
         "data": {
           "scan_interval": "Update Interval (seconds)"
         },
-        "description": "Adjust how often Home Assistant polls the wallbox. (3-30s / Default: 10s)"
+        "data_description": {
+          "scan_interval": "Adjust how often Home Assistant polls the wallbox. (3-30s / Default: 10s)"
+        }
       }
     }
   },
