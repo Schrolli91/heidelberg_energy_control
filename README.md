@@ -75,3 +75,12 @@ The author(s) of this integration are not responsible for any damage to your har
 
 * Modbus communication directly influences the charging behavior; ensure your gateway and network are stable.
 * Always follow the official manual provided by Heidelberg for wiring and safety instructions.
+
+## Removal
+To remove the integration:
+
+1. Go to **Settings** > **Devices & Services**.
+2. Find the **Heidelberg Energy Control** entry.
+3. Click the three-dot menu and select **Delete**.
+4. Confirm the deletion.
+5. Restart Home Assistant.
