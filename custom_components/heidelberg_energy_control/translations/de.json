@@ -4,9 +4,15 @@
       "user": {
         "data": {
           "name": "Name",
-          "host": "Host (IP-Adresse)",
+          "host": "Host",
           "port": "Port",
-          "device_id": "Geräte-ID (Modbus Slave ID)"
+          "device_id": "Geräte-ID"
+        },
+        "data_description": {
+          "name": "Frei wählbarer Name deiner Wallbox",
+          "host": "IP-Adresse deines Modbus TCP Gateways",
+          "port": "Port deines Modbus TCP Gateways (Standard: 502)",
+          "device_id": "Modbus Slave ID deiner Wallbox (Standard: 1)"
         }
       }
     },
@@ -25,7 +31,9 @@
         "data": {
           "scan_interval": "Update Intervall (Sekunden)"
         },
-        "description": "Wähle wie oft die Daten von der Wallbox geholt werden sollen. (3-30s / Standard: 10s)"
+        "data_description": {
+          "scan_interval": "Wähle wie oft die Daten von der Wallbox geholt werden sollen. (3-30s / Standard: 10s)"
+        },
       }
     }
   },
