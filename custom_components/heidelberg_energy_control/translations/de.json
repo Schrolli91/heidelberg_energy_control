@@ -25,7 +25,7 @@
       "already_configured": "Diese Wallbox ist bereits konfiguriert"
     }
   },
-    "options": {
+  "options": {
     "step": {
       "init": {
         "data": {
@@ -33,7 +33,7 @@
         },
         "data_description": {
           "scan_interval": "Wähle wie oft die Daten von der Wallbox geholt werden sollen. (3-30s / Standard: 10s)"
-        },
+        }
       }
     }
   },
