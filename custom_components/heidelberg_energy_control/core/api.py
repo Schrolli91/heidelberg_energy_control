@@ -38,9 +38,9 @@ from ..const import (
     REG_COMMAND_START,
     REG_DATA_COUNT,
     REG_DATA_START,
-    REG_HW_COUNT,
     REG_HW_CURR_START,
-    REG_HW_START,
+    REG_HW_VERS,
+    REG_SW_VERS,
     REG_LAYOUT,
 )
 
@@ -84,9 +84,14 @@ class HeidelbergEnergyControlAPI:
                 count=1,
                 device_id=self._device_id,
             )
-            version_result = await self._client.read_input_registers(
-                address=REG_HW_START,
-                count=REG_HW_COUNT,
+            hw_vers_result = await self._client.read_input_registers(
+                address=REG_HW_VERS,
+                count=1,
+                device_id=self._device_id,
+            )
+            sw_vers_result = await self._client.read_input_registers(
+                address=REG_SW_VERS,
+                count=1,
                 device_id=self._device_id,
             )
             hw_curr_result = await self._client.read_input_registers(
@@ -95,23 +100,31 @@ class HeidelbergEnergyControlAPI:
                 device_id=self._device_id,
             )
             if layout_result.isError():
+                _LOGGER.error("Modbus LAYOUT read error: %s", layout_result)
                 return None
-            if version_result.isError():
+            if hw_vers_result.isError():
+                _LOGGER.error("Modbus HW_VERSION read error: %s", hw_vers_result)
+                return None
+            if sw_vers_result.isError():
+                _LOGGER.error("Modbus SW_VERSION read error: %s", sw_vers_result)
                 return None
             if hw_curr_result.isError():
+                _LOGGER.error("Modbus HW_CURRENT read error: %s", hw_curr_result)
                 return None
 
             layout_regs = layout_result.registers
-            version_regs = version_result.registers
+            hw_vers_regs = hw_vers_result.registers
+            sw_vers_regs = sw_vers_result.registers
             hw_curr_regs = hw_curr_result.registers
             return {
                 DATA_REG_LAYOUT_VER: self._register_to_version(layout_regs[0]),
-                DATA_HW_VERSION: self._register_to_version(version_regs[0]),
-                DATA_SW_VERSION: self._register_to_version(version_regs[3]),
+                DATA_HW_VERSION: self._register_to_version(hw_vers_regs[0]),
+                DATA_SW_VERSION: self._register_to_version(sw_vers_regs[0]),
                 DATA_HW_MAX_CURR: hw_curr_regs[0],
                 DATA_HW_MIN_CURR: hw_curr_regs[1],
             }
-        except Exception:
+        except Exception as err:
+            _LOGGER.error("Error fetching static wallbox data: %s", err)
             return None
 
     async def async_write_register(self, address: int, value: int) -> bool:

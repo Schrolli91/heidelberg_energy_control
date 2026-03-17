@@ -64,9 +64,9 @@ REG_DATA_START = 5
 REG_DATA_COUNT = 14
 # Modbus Register for hw current settings (length 2)
 REG_HW_CURR_START = 100
-# Modbus Register for hw/sw version
-REG_HW_START = 200
-REG_HW_COUNT = 4
+# Modbus Register for hw/sw version (length 1 each)
+REG_HW_VERS = 200
+REG_SW_VERS = 203
 # Modbus Register for control
 REG_COMMAND_START = 257
 REG_COMMAND_COUNT = 6
