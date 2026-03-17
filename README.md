@@ -53,13 +53,17 @@ This integration provides a comprehensive set of entities to monitor and control
 #### 📊 Monitoring (Sensors)
 * **Charging Power**: Real-time power consumption in Watts.
 * **Energy Session**: Energy consumed during the current or last charging session (kWh).
+* **Energy Total**: Energy consumed since the wallbox installed (kWh).
+* **Energy Since Power On**: Energy consumed since the wallbox was powered on (kWh).
 * **Vehicle Status**: Shows the current state of the vehicle (e.g., Standby, Charging).
 * **Vehicle Connection**: Indicates if a vehicle is plugged into the wallbox.
+* **Phases Active**: Number of active phases (1-3).
+* **Target Current**: Currently set target current on the wallbox (A).
 
 #### 🔍 Diagnostics & Advanced Data
 * **Total Energy**: Lifetime energy consumption of the wallbox.
 * **Phase-specific Data**: Individual monitoring of Voltage (V) and Current (A) for each phase (**L1, L2, L3**).
-* **Hardware Limit**: Displays the physical current limit, set via modbus on the wallbox.
+* **Hardware Limit (Min and Max)**: Displays the physical current limit, set via modbus on the wallbox.
 * **External Lock**: Status of the hardware lock contact.
 * **Internal Temperature**: Monitor the housing temperature of the wallbox.
 
