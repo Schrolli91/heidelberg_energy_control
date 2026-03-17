@@ -62,7 +62,6 @@ This integration provides a comprehensive set of entities to monitor and control
 * **Hardware Limit**: Displays the physical current limit, set via modbus on the wallbox.
 * **External Lock**: Status of the hardware lock contact.
 * **Internal Temperature**: Monitor the housing temperature of the wallbox.
-* **Modbus Performance**: Diagnostic logs show the response time of your gateway (useful for optimizing PV-surplus charging like **evcc**).
 
 #### 🏠 Local Control
 * **No Cloud Required**: Works completely offline via your local network.
