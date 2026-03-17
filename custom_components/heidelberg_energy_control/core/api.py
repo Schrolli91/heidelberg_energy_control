@@ -100,12 +100,16 @@ class HeidelbergEnergyControlAPI:
                 device_id=self._device_id,
             )
             if layout_result.isError():
+                _LOGGER.error("Modbus LAYOUT read error: %s", layout_result)
                 return None
             if hw_vers_result.isError():
+                _LOGGER.error("Modbus HW_VERSION read error: %s", hw_vers_result)
                 return None
             if sw_vers_result.isError():
+                _LOGGER.error("Modbus SW_VERSION read error: %s", sw_vers_result)
                 return None
             if hw_curr_result.isError():
+                _LOGGER.error("Modbus HW_CURRENT read error: %s", hw_curr_result)
                 return None
 
             layout_regs = layout_result.registers
@@ -119,7 +123,8 @@ class HeidelbergEnergyControlAPI:
                 DATA_HW_MAX_CURR: hw_curr_regs[0],
                 DATA_HW_MIN_CURR: hw_curr_regs[1],
             }
-        except Exception:
+        except Exception as err:
+            _LOGGER.error("Error fetching static wallbox data: %s", err)
             return None
 
     async def async_write_register(self, address: int, value: int) -> bool:
