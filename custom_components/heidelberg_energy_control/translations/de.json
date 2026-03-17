@@ -43,7 +43,7 @@
       "charging_power": { "name": "Ladeleistung" },
       "total_energy": { "name": "Energie Gesamt" },
       "session_energy": { "name": "Energie Ladesession" },
-      "energy_since_power_on": { "name": "Energie seit Power on" },
+      "energy_since_power_on": { "name": "Energie seit Einschalten" },
       "phases_active": { "name": "Aktive Phasen" },
       "current": { "name": "Ladestrom" },
       "current_l1": { "name": "Strom L1" },
