@@ -12,6 +12,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
     COMMAND_TARGET_CURRENT,
@@ -172,7 +173,7 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
         except Exception as err:
             # Catch unexpected errors and log full traceback
             _LOGGER.exception("Unexpected error during write operation")
-            raise UpdateFailed(f"Unexpected error: {err}") from err
+            raise HomeAssistantError(f"Failed to set current: {err}") from err
 
     async def async_handle_switch_state_change(self, key: str, is_on: bool) -> None:
         """Handle UI requests from the virtual enable switch."""
