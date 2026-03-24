@@ -23,6 +23,11 @@ from .const import (
     VIRTUAL_ENABLE,
     VIRTUAL_TARGET_CURRENT,
 )
+from .core.exceptions import (
+    HeidelbergEnergyControlConnectionError,
+    HeidelbergEnergyControlReadError,
+    HeidelbergEnergyControlWriteError,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -76,7 +81,12 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
             # Fetch all registers from the wallbox via Modbus API
             data = await self.api.async_get_data()
             if not data:
-                _LOGGER.warning("Empty data response from wallbox, keeping previous state")
+                _LOGGER.warning(
+                    "Empty data response from wallbox, keeping previous state"
+                )
+                # TODO: use UpdateFailed to signal unavailability.
+                # Do this witch a counter to prevent marking the device as unavailable on every hicups.
+                # Maybe only after 3 consecutive failures?
                 return self.data
 
             # If virtual logic is not supported, just return raw data (Legacy Mode)
@@ -116,11 +126,22 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
             # Note: COMMAND_TARGET_CURRENT remains the raw hardware value (will show 0.0 when logic is off)
             return data
 
+        except HeidelbergEnergyControlConnectionError as err:
+            raise UpdateFailed(
+                f"Connection to Modbus gateway failed: {err}",
+                retry_after=30,
+            ) from err
+
+        except HeidelbergEnergyControlReadError as err:
+            raise UpdateFailed(f"Failed to read from Wallbox: {err}") from err
+
         except Exception as err:
-            raise UpdateFailed(f"Error communicating with Modbus API: {err}")
+            # Catch unexpected errors and log full traceback
+            _LOGGER.exception("Unexpected error in coordinator update")
+            raise UpdateFailed(f"Unexpected error: {err}") from err
 
     async def _write_current_to_wallbox(self, value: float) -> None:
-        """Internal helper to write a specific Ampere value to the Modbus register."""
+        """Internal helper to write a specific Ampere value."""
         if not self.supports_virtual_logic:
             _LOGGER.error("Firmware too old to support writing to register 261")
             return
@@ -131,14 +152,27 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
                 REG_COMMAND_TARGET_CURRENT, modbus_value
             )
 
+            # Update local state for immediate UI feedback
             self.data[COMMAND_TARGET_CURRENT] = value
             self.async_update_listeners()
+
+        except (
+            HeidelbergEnergyControlWriteError,
+            HeidelbergEnergyControlConnectionError,
+        ) as err:
+            _LOGGER.error("Failed to write to wallbox: %s", err)
+
+            # If write fails due to connection, we also want to mark the coordinator as failed
+            # This ensures entities reflect the broken state immediately
+            self.last_update_success = False
+
+            # Trigger refresh (which will then hit the 30s throttle in _async_update_data if connection is dead)
+            await self.async_refresh()
+
         except Exception as err:
-            _LOGGER.error(
-                "Failed to write to wallbox register %s: %s",
-                REG_COMMAND_TARGET_CURRENT,
-                err,
-            )
+            # Catch unexpected errors and log full traceback
+            _LOGGER.exception("Unexpected error during write operation")
+            raise UpdateFailed(f"Unexpected error: {err}") from err
 
     async def async_handle_switch_state_change(self, key: str, is_on: bool) -> None:
         """Handle UI requests from the virtual enable switch."""
@@ -199,6 +233,7 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
                     feature_name,
                 )
                 return True
+
             curr = version.parse(curr_str)
             supported = curr >= version.parse(min_required)
 
@@ -207,14 +242,13 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
                     "Feature '%s' is not supported by your firmware. Required: %s, Found: %s",
                     feature_name,
                     min_required,
-                    self.static_data.get(DATA_REG_LAYOUT_VER),
+                    curr_str,
                 )
             return supported
 
-        except Exception as err:
-            _LOGGER.error(
-                "Error comparing firmware versions for feature '%s': %s",
-                feature_name,
-                err,
+        except Exception:
+            # Fallback for parsing errors to prevent integration breakage
+            _LOGGER.warning(
+                "Could not parse version for %s, assuming compatible", feature_name
             )
-            return True  # Fallback: load entity to avoid data loss
+            return True
