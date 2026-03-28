@@ -94,14 +94,14 @@ class HeidelbergEnergyControlAPI:
         try:
             # Read layout version
             layout_result = await self._client.read_input_registers(
-                address=REG_LAYOUT, count=1, slave=self._device_id
+                address=REG_LAYOUT, count=1, device_id=self._device_id
             )
             if layout_result.isError():
                 raise HeidelbergEnergyControlReadError("Failed to read LAYOUT register")
 
             # Read hardware version
             hw_vers_result = await self._client.read_input_registers(
-                address=REG_HW_VERS, count=1, slave=self._device_id
+                address=REG_HW_VERS, count=1, device_id=self._device_id
             )
             if hw_vers_result.isError():
                 raise HeidelbergEnergyControlReadError(
@@ -110,7 +110,7 @@ class HeidelbergEnergyControlAPI:
 
             # Read software version
             sw_vers_result = await self._client.read_input_registers(
-                address=REG_SW_VERS, count=1, slave=self._device_id
+                address=REG_SW_VERS, count=1, device_id=self._device_id
             )
             if sw_vers_result.isError():
                 raise HeidelbergEnergyControlReadError(
@@ -119,7 +119,7 @@ class HeidelbergEnergyControlAPI:
 
             # Read hardware current limits
             hw_curr_result = await self._client.read_input_registers(
-                address=REG_HW_CURR_START, count=2, slave=self._device_id
+                address=REG_HW_CURR_START, count=2, device_id=self._device_id
             )
             if hw_curr_result.isError():
                 raise HeidelbergEnergyControlReadError(
@@ -147,7 +147,7 @@ class HeidelbergEnergyControlAPI:
         await self.connect()
         try:
             result = await self._client.write_register(
-                address=address, value=int(value), slave=self._device_id
+                address=address, value=int(value), device_id=self._device_id
             )
             if result.isError():
                 raise HeidelbergEnergyControlWriteError(
@@ -174,7 +174,7 @@ class HeidelbergEnergyControlAPI:
             # Read input registers (data)
             data_start = time.perf_counter()
             data = await self._client.read_input_registers(
-                address=REG_DATA_START, count=REG_DATA_COUNT, slave=self._device_id
+                address=REG_DATA_START, count=REG_DATA_COUNT, device_id=self._device_id
             )
             if data.isError():
                 raise HeidelbergEnergyControlReadError("Failed to read data registers")
@@ -186,7 +186,7 @@ class HeidelbergEnergyControlAPI:
             command = await self._client.read_holding_registers(
                 address=REG_COMMAND_START,
                 count=REG_COMMAND_COUNT,
-                slave=self._device_id,
+                device_id=self._device_id,
             )
             if command.isError():
                 raise HeidelbergEnergyControlReadError(
