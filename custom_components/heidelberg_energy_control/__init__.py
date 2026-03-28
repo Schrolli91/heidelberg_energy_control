@@ -11,6 +11,10 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from .const import PLATFORMS
 from .coordinator import HeidelbergEnergyControlCoordinator
 from .core.api import HeidelbergEnergyControlAPI
+from .core.exceptions import (
+    HeidelbergEnergyControlConnectionError,
+    HeidelbergEnergyControlReadError,
+)
 
 # _LOGGER = logging.getLogger(__name__)
 
@@ -33,9 +37,7 @@ async def async_setup_entry(
     )
 
     try:
-        if not await api.connect():
-            raise ConfigEntryNotReady(f"Unable to connect to wallbox at {api._host}")
-
+        await api.connect()
         static_data = await api.async_get_static_data()
         if static_data is None:
             await api.disconnect()
@@ -43,9 +45,12 @@ async def async_setup_entry(
                 "Wallbox connected but did not respond to requests"
             )
 
+    except HeidelbergEnergyControlConnectionError as err:
+        raise ConfigEntryNotReady(f"Unable to connect to wallbox: {err}") from err
+    except HeidelbergEnergyControlReadError as err:
+        await api.disconnect()
+        raise ConfigEntryNotReady(f"Failed to read static data: {err}") from err
     except Exception as err:
-        if isinstance(err, ConfigEntryNotReady):
-            raise
         raise ConfigEntryNotReady(f"Error communicating with wallbox: {err}") from err
 
     coordinator = HeidelbergEnergyControlCoordinator(

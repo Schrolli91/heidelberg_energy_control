@@ -19,7 +19,10 @@ from homeassistant.helpers import selector
 
 from .const import CONF_DEVICE_ID, DEFAULT_SCAN_INTERVAL, DOMAIN
 from .core.api import HeidelbergEnergyControlAPI
-from .core.exceptions import CannotConnect, InvalidAuth
+from .core.exceptions import (
+    HeidelbergEnergyControlConnectionError,
+    HeidelbergEnergyControlReadError,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,20 +46,22 @@ async def validate_input(data: dict[str, Any]) -> dict[str, Any]:
     )
 
     try:
-        if not await api.connect():
-            raise CannotConnect
-
-        versions = await api.async_get_static_data()
+        await api.connect()
+        static_data = await api.async_get_static_data()
         await api.disconnect()
 
-        if versions is None:
-            raise InvalidAuth
+        if static_data is None:
+            raise HeidelbergEnergyControlReadError(
+                "Wallbox connected but did not respond to requests"
+            )
 
-    except (CannotConnect, InvalidAuth):
+    except HeidelbergEnergyControlConnectionError:
+        raise
+    except HeidelbergEnergyControlReadError:
         raise
     except Exception as err:
-        _LOGGER.error("Connection validation failed: %s", err)
-        raise CannotConnect from err
+        _LOGGER.error("Unexpected validation error: %s", err)
+        raise HeidelbergEnergyControlConnectionError(f"Validation failed: {err}") from err
 
     return {"title": data[CONF_NAME]}
 
@@ -79,9 +84,9 @@ class HeidelbergEnergyControlConfigFlow(ConfigFlow, domain=DOMAIN):
             try:
                 info = await validate_input(user_input)
                 return self.async_create_entry(title=info["title"], data=user_input)
-            except CannotConnect:
+            except HeidelbergEnergyControlConnectionError:
                 errors["base"] = "cannot_connect"
-            except InvalidAuth:
+            except HeidelbergEnergyControlReadError:
                 errors["base"] = "invalid_auth"
             except Exception:
                 _LOGGER.exception("Unexpected exception")
