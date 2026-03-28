@@ -46,7 +46,6 @@ async def validate_input(data: dict[str, Any]) -> dict[str, Any]:
     )
 
     try:
-        await api.connect()
         static_data = await api.async_get_static_data()
         await api.disconnect()
 

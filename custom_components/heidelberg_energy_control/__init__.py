@@ -37,7 +37,6 @@ async def async_setup_entry(
     )
 
     try:
-        await api.connect()
         static_data = await api.async_get_static_data()
         if static_data is None:
             await api.disconnect()
