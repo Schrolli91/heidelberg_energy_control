@@ -22,6 +22,7 @@ from .core.api import HeidelbergEnergyControlAPI
 from .core.exceptions import (
     HeidelbergEnergyControlConnectionError,
     HeidelbergEnergyControlReadError,
+    HeidelbergEnergyControlAPIError,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -60,7 +61,7 @@ async def validate_input(data: dict[str, Any]) -> dict[str, Any]:
         raise
     except Exception as err:
         _LOGGER.error("Unexpected validation error: %s", err)
-        raise HeidelbergEnergyControlConnectionError(f"Validation failed: {err}") from err
+        raise HeidelbergEnergyControlAPIError(f"Validation failed: {err}") from err
 
     return {"title": data[CONF_NAME]}
 
@@ -77,7 +78,9 @@ class HeidelbergEnergyControlConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            await self.async_set_unique_id(f"{user_input[CONF_HOST]}-{user_input[CONF_DEVICE_ID]}")
+            await self.async_set_unique_id(
+                f"{user_input[CONF_HOST]}-{user_input[CONF_DEVICE_ID]}"
+            )
             self._abort_if_unique_id_configured()
 
             try:
@@ -86,7 +89,9 @@ class HeidelbergEnergyControlConfigFlow(ConfigFlow, domain=DOMAIN):
             except HeidelbergEnergyControlConnectionError:
                 errors["base"] = "cannot_connect"
             except HeidelbergEnergyControlReadError:
-                errors["base"] = "invalid_auth"
+                errors["base"] = "invalid_data"
+            except HeidelbergEnergyControlAPIError:
+                errors["base"] = "unknown_api_error"
             except Exception:
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
