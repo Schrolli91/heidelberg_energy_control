@@ -209,6 +209,11 @@ class HeidelbergEnergyControlAPI:
             target_current_regs = target_current.registers
 
             if not data_regs or len(data_regs) < REG_DATA_COUNT:
+                _LOGGER.error(
+                    "Data register incomplete: expected %d registers, got %d",
+                    REG_DATA_COUNT,
+                    len(data_regs) if data_regs else 0,
+                )
                 raise HeidelbergEnergyControlReadError("Data register incomplete")
 
 
