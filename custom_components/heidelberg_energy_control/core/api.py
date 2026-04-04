@@ -43,6 +43,12 @@ from ..const import (
     REG_SW_VERS,
     REG_LAYOUT,
 )
+from .exceptions import (
+    HeidelbergEnergyControlAPIError,
+    HeidelbergEnergyControlConnectionError,
+    HeidelbergEnergyControlReadError,
+    HeidelbergEnergyControlWriteError,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -61,15 +67,21 @@ class HeidelbergEnergyControlAPI:
             timeout=5,
         )
 
-    async def connect(self) -> bool:
-        """Connect to the wallbox."""
+    async def connect(self) -> None:
+        """Connect to the wallbox (no-op if already connected)."""
         if self._client.connected:
-            return True
+            return
         try:
-            return await self._client.connect()
-        except ModbusException as err:
+            result = await self._client.connect()
+            if not result:
+                raise HeidelbergEnergyControlConnectionError(
+                    "Failed to connect to the wallbox"
+                )
+        except (ModbusException, OSError) as err:
             _LOGGER.error("Modbus connection error: %s", err)
-            return False
+            raise HeidelbergEnergyControlConnectionError(
+                f"Failed to connect to the wallbox: {err}"
+            ) from err
 
     async def disconnect(self) -> None:
         """Disconnect from the wallbox."""
@@ -78,134 +90,125 @@ class HeidelbergEnergyControlAPI:
 
     async def async_get_static_data(self) -> dict[str, str] | None:
         """Read the static data and return if successful."""
+        await self.connect()
         try:
+            # Read layout version
             layout_result = await self._client.read_input_registers(
-                address=REG_LAYOUT,
-                count=1,
-                device_id=self._device_id,
-            )
-            hw_vers_result = await self._client.read_input_registers(
-                address=REG_HW_VERS,
-                count=1,
-                device_id=self._device_id,
-            )
-            sw_vers_result = await self._client.read_input_registers(
-                address=REG_SW_VERS,
-                count=1,
-                device_id=self._device_id,
-            )
-            hw_curr_result = await self._client.read_input_registers(
-                address=REG_HW_CURR_START,
-                count=2,
-                device_id=self._device_id,
+                address=REG_LAYOUT, count=1, device_id=self._device_id
             )
             if layout_result.isError():
-                _LOGGER.error("Modbus LAYOUT read error: %s", layout_result)
-                return None
-            if hw_vers_result.isError():
-                _LOGGER.error("Modbus HW_VERSION read error: %s", hw_vers_result)
-                return None
-            if sw_vers_result.isError():
-                _LOGGER.error("Modbus SW_VERSION read error: %s", sw_vers_result)
-                return None
-            if hw_curr_result.isError():
-                _LOGGER.error("Modbus HW_CURRENT read error: %s", hw_curr_result)
-                return None
+                raise HeidelbergEnergyControlReadError("Failed to read LAYOUT register")
 
-            layout_regs = layout_result.registers
-            hw_vers_regs = hw_vers_result.registers
-            sw_vers_regs = sw_vers_result.registers
-            hw_curr_regs = hw_curr_result.registers
+            # Read hardware version
+            hw_vers_result = await self._client.read_input_registers(
+                address=REG_HW_VERS, count=1, device_id=self._device_id
+            )
+            if hw_vers_result.isError():
+                raise HeidelbergEnergyControlReadError(
+                    "Failed to read HW_VERSION register"
+                )
+
+            # Read software version
+            sw_vers_result = await self._client.read_input_registers(
+                address=REG_SW_VERS, count=1, device_id=self._device_id
+            )
+            if sw_vers_result.isError():
+                raise HeidelbergEnergyControlReadError(
+                    "Failed to read SW_VERSION register"
+                )
+
+            # Read hardware current limits
+            hw_curr_result = await self._client.read_input_registers(
+                address=REG_HW_CURR_START, count=2, device_id=self._device_id
+            )
+            if hw_curr_result.isError():
+                raise HeidelbergEnergyControlReadError(
+                    "Failed to read HW_CURRENT register"
+                )
+
             return {
-                DATA_REG_LAYOUT_VER: self._register_to_version(layout_regs[0]),
-                DATA_HW_VERSION: self._register_to_version(hw_vers_regs[0]),
-                DATA_SW_VERSION: self._register_to_version(sw_vers_regs[0]),
-                DATA_HW_MAX_CURR: hw_curr_regs[0],
-                DATA_HW_MIN_CURR: hw_curr_regs[1],
+                DATA_REG_LAYOUT_VER: self._register_to_version(
+                    layout_result.registers[0]
+                ),
+                DATA_HW_VERSION: self._register_to_version(hw_vers_result.registers[0]),
+                DATA_SW_VERSION: self._register_to_version(sw_vers_result.registers[0]),
+                DATA_HW_MAX_CURR: hw_curr_result.registers[0],
+                DATA_HW_MIN_CURR: hw_curr_result.registers[1],
             }
-        except Exception as err:
+        except (ModbusException, OSError, IndexError) as err:
             _LOGGER.error("Error fetching static wallbox data: %s", err)
-            return None
+            raise HeidelbergEnergyControlReadError(
+                f"Failed to fetch static wallbox data: {err}"
+            ) from err
 
     async def async_write_register(self, address: int, value: int) -> bool:
         """Write a value to a specific register (FC06)."""
         write_start = time.perf_counter()
+        await self.connect()
         try:
-            if not self._client.connected:
-                if not await self.connect():
-                    return False
-
             result = await self._client.write_register(
                 address=address, value=int(value), device_id=self._device_id
             )
-
             if result.isError():
-                _LOGGER.error(
-                    "Modbus Error on writing Register %s: %s", address, result
+                raise HeidelbergEnergyControlWriteError(
+                    f"Failed to write register {address}"
                 )
-                return False
 
-            write_duration = time.perf_counter() - write_start
             _LOGGER.debug(
                 "Write complete: WRITE: %.3fs",
-                write_duration,
+                time.perf_counter() - write_start,
             )
-
             return True
-        except Exception as err:
+        except (ModbusException, OSError) as err:
             _LOGGER.error("Error on writing Register %s: %s", address, err)
-            return False
+            raise HeidelbergEnergyControlWriteError(
+                f"Failed to write register {address}: {err}"
+            ) from err
 
     async def async_get_data(self) -> dict[str, Any]:
         """Read all relevant registers in one call and map to constants."""
         all_start = time.perf_counter()
+        await self.connect()
 
         try:
-            if not self._client.connected:
-                if not await self.connect():
-                    return {}
-
+            # Read input registers (data)
             data_start = time.perf_counter()
             data = await self._client.read_input_registers(
-                address=REG_DATA_START,
-                count=REG_DATA_COUNT,
-                device_id=self._device_id,
+                address=REG_DATA_START, count=REG_DATA_COUNT, device_id=self._device_id
             )
-            data_duration = time.perf_counter() - data_start
             if data.isError():
-                _LOGGER.error("Modbus DATA read error: %s", data)
-                return {}
+                raise HeidelbergEnergyControlReadError("Failed to read data registers")
 
+            data_duration = time.perf_counter() - data_start
+
+            # Read holding registers (commands/settings)
             cmd_start = time.perf_counter()
             command = await self._client.read_holding_registers(
                 address=REG_COMMAND_START,
                 count=REG_COMMAND_COUNT,
                 device_id=self._device_id,
             )
-            cmd_duration = time.perf_counter() - cmd_start
             if command.isError():
-                _LOGGER.error("Modbus COMMAND read error: %s", command)
-                return {}
+                raise HeidelbergEnergyControlReadError(
+                    "Failed to read command registers"
+                )
+
+            cmd_duration = time.perf_counter() - cmd_start
 
             data_regs = data.registers
             command_regs = command.registers
 
-            if data_regs is None or len(data_regs) < REG_DATA_COUNT:
-                _LOGGER.warning("Data Register incomplete (got: %s)", len(data_regs) if data_regs else 0)
-                return {}
+            if not data_regs or len(data_regs) < REG_DATA_COUNT:
+                raise HeidelbergEnergyControlReadError("Data register incomplete")
 
-            if command_regs is None or len(command_regs) < REG_COMMAND_COUNT:
-                _LOGGER.warning(
-                    "Command Register incomplete (got: %s)", len(command_regs) if command_regs else 0
-                )
-                return {}
+            if not command_regs or len(command_regs) < REG_COMMAND_COUNT:
+                raise HeidelbergEnergyControlReadError("Command register incomplete")
 
-            all_duration = time.perf_counter() - all_start
             _LOGGER.debug(
                 "Fetch complete: DATA: %.3fs | CMD: %.3fs | Total: %.3fs",
                 data_duration,
                 cmd_duration,
-                all_duration,
+                time.perf_counter() - all_start,
             )
 
             curr_l1 = data_regs[1] / 10.0
@@ -213,8 +216,9 @@ class HeidelbergEnergyControlAPI:
             curr_l3 = data_regs[3] / 10.0
 
             active_phases = sum(1 for i in [curr_l1, curr_l2, curr_l3] if i > 0.1)
-
-            charge_current = round((curr_l1+curr_l2+curr_l3)/max(1, active_phases),2)
+            charge_current = round(
+                (curr_l1 + curr_l2 + curr_l3) / max(1, active_phases), 2
+            )
 
             return {
                 # DATA
@@ -243,28 +247,23 @@ class HeidelbergEnergyControlAPI:
                 COMMAND_TARGET_CURRENT: command_regs[4] / 10.0,
             }
 
-        except Exception as err:
+        except (ModbusException, OSError, IndexError) as err:
             _LOGGER.error("Error fetching wallbox data: %s", err)
-            return {}
+            raise HeidelbergEnergyControlReadError(
+                f"Failed to fetch wallbox data: {err}"
+            ) from err
 
     def _to_32bit(self, regs: list[int], idx_high: int) -> int:
         """Helper to combine two 16-bit registers to 32-bit."""
         if idx_high + 1 >= len(regs):
-            _LOGGER.error(
-                "Index out of bounds for 32-bit conversion: idx=%s, regs_len=%s",
-                idx_high,
-                len(regs),
+            raise HeidelbergEnergyControlAPIError(
+                f"Index {idx_high} out of bounds for 32-bit conversion"
             )
-            return 0
-        try:
-            return (regs[idx_high] << 16) | regs[idx_high + 1]
-        except Exception as err:
-            _LOGGER.error("Error converting registers to 32-bit: %s", err)
-            return 0
+        return (regs[idx_high] << 16) | regs[idx_high + 1]
 
     def _register_to_version(self, decimal_value: int) -> str:
-        h = hex(decimal_value)[2:]
-        h = h.zfill(3)
+        """Convert register decimal value to semver string."""
+        h = hex(decimal_value)[2:].zfill(3)
         patch = int(h[-1], 16)
         minor = int(h[-2], 16)
         major = int(h[:-2], 16)

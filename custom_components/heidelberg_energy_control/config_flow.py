@@ -19,7 +19,11 @@ from homeassistant.helpers import selector
 
 from .const import CONF_DEVICE_ID, DEFAULT_SCAN_INTERVAL, DOMAIN
 from .core.api import HeidelbergEnergyControlAPI
-from .core.exceptions import CannotConnect, InvalidAuth
+from .core.exceptions import (
+    HeidelbergEnergyControlConnectionError,
+    HeidelbergEnergyControlReadError,
+    HeidelbergEnergyControlAPIError,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,20 +47,21 @@ async def validate_input(data: dict[str, Any]) -> dict[str, Any]:
     )
 
     try:
-        if not await api.connect():
-            raise CannotConnect
-
-        versions = await api.async_get_static_data()
+        static_data = await api.async_get_static_data()
         await api.disconnect()
 
-        if versions is None:
-            raise InvalidAuth
+        if static_data is None:
+            raise HeidelbergEnergyControlReadError(
+                "Wallbox connected but did not respond to requests"
+            )
 
-    except (CannotConnect, InvalidAuth):
+    except HeidelbergEnergyControlConnectionError:
+        raise
+    except HeidelbergEnergyControlReadError:
         raise
     except Exception as err:
-        _LOGGER.error("Connection validation failed: %s", err)
-        raise CannotConnect from err
+        _LOGGER.error("Unexpected validation error: %s", err)
+        raise HeidelbergEnergyControlAPIError(f"Validation failed: {err}") from err
 
     return {"title": data[CONF_NAME]}
 
@@ -73,16 +78,20 @@ class HeidelbergEnergyControlConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            await self.async_set_unique_id(f"{user_input[CONF_HOST]}-{user_input[CONF_DEVICE_ID]}")
+            await self.async_set_unique_id(
+                f"{user_input[CONF_HOST]}-{user_input[CONF_DEVICE_ID]}"
+            )
             self._abort_if_unique_id_configured()
 
             try:
                 info = await validate_input(user_input)
                 return self.async_create_entry(title=info["title"], data=user_input)
-            except CannotConnect:
+            except HeidelbergEnergyControlConnectionError:
                 errors["base"] = "cannot_connect"
-            except InvalidAuth:
-                errors["base"] = "invalid_auth"
+            except HeidelbergEnergyControlReadError:
+                errors["base"] = "invalid_data"
+            except HeidelbergEnergyControlAPIError:
+                errors["base"] = "unknown_api_error"
             except Exception:
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"

@@ -18,7 +18,8 @@
     },
     "error": {
       "cannot_connect": "Failed to connect to the wallbox",
-      "invalid_auth": "Wallbox connected but did not respond (check Slave ID)",
+      "invalid_data": "Wallbox connected but did not respond (check Slave ID)",
+      "unknown_api_error": "Unexpected error while communicating with the wallbox API",
       "unknown": "Unexpected error"
     },
     "abort": {
@@ -39,44 +40,93 @@
   },
   "entity": {
     "sensor": {
-      "charging_state": { "name": "Charging state" },
-      "charging_power": { "name": "Charging power" },
-      "total_energy": { "name": "Total energy" },
-      "session_energy": { "name": "Session energy" },
-      "energy_since_power_on": { "name": "Energy since power on" },
-      "phases_active": { "name": "Active Phases" },
-      "current": { "name": "Charging Current" },
-      "current_l1": { "name": "Current L1" },
-      "current_l2": { "name": "Current L2" },
-      "current_l3": { "name": "Current L3" },
-      "voltage_l1": { "name": "Voltage L1" },
-      "voltage_l2": { "name": "Voltage L2" },
-      "voltage_l3": { "name": "Voltage L3" },
-      "pcb_temperature": { "name": "Housing temperature" },
-      "max_current_command": { "name": "Requested Current" },
-      "hw_min_current": { "name": "Configured Min. Current" },
-      "hw_max_current": { "name": "Configured Max. Current" }
+      "charging_state": {
+        "name": "Charging state"
+      },
+      "charging_power": {
+        "name": "Charging power"
+      },
+      "total_energy": {
+        "name": "Total energy"
+      },
+      "session_energy": {
+        "name": "Session energy"
+      },
+      "energy_since_power_on": {
+        "name": "Energy since power on"
+      },
+      "phases_active": {
+        "name": "Active Phases"
+      },
+      "current": {
+        "name": "Charging Current"
+      },
+      "current_l1": {
+        "name": "Current L1"
+      },
+      "current_l2": {
+        "name": "Current L2"
+      },
+      "current_l3": {
+        "name": "Current L3"
+      },
+      "voltage_l1": {
+        "name": "Voltage L1"
+      },
+      "voltage_l2": {
+        "name": "Voltage L2"
+      },
+      "voltage_l3": {
+        "name": "Voltage L3"
+      },
+      "pcb_temperature": {
+        "name": "Housing temperature"
+      },
+      "max_current_command": {
+        "name": "Requested Current"
+      },
+      "hw_min_current": {
+        "name": "Configured Min. Current"
+      },
+      "hw_max_current": {
+        "name": "Configured Max. Current"
+      }
     },
     "binary_sensor": {
       "external_lock_state": {
         "name": "External Lock",
-        "state": {"on": "Locked", "off": "Unlocked"}
+        "state": {
+          "on": "Locked",
+          "off": "Unlocked"
+        }
       },
       "is_plugged": {
         "name": "Vehicle connected",
-        "state": {"on": "Connected", "off": "Disconnected"}
+        "state": {
+          "on": "Connected",
+          "off": "Disconnected"
+        }
       },
       "is_charging": {
         "name": "Vehicle charging",
-        "state": {"on": "Charging", "off": "Standby"}
+        "state": {
+          "on": "Charging",
+          "off": "Standby"
+        }
       }
     },
     "number": {
-      "virtual_current": { "name": "Target Charging Current" }
+      "virtual_current": {
+        "name": "Target Charging Current"
+      }
     },
     "switch": {
-      "remote_lock_command": { "name": "Remote Lock" },
-      "virtual_enable": { "name": "Charge Enable" }
+      "remote_lock_command": {
+        "name": "Remote Lock"
+      },
+      "virtual_enable": {
+        "name": "Charge Enable"
+      }
     }
   }
 }
