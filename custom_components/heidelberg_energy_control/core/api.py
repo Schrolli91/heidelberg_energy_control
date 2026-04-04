@@ -34,14 +34,14 @@ from ..const import (
     DATA_VOLTAGE_L1,
     DATA_VOLTAGE_L2,
     DATA_VOLTAGE_L3,
-    REG_COMMAND_COUNT,
-    REG_COMMAND_START,
     REG_DATA_COUNT,
     REG_DATA_START,
     REG_HW_CURR_START,
     REG_HW_VERS,
     REG_SW_VERS,
     REG_LAYOUT,
+    REG_COMMAND_REMOTE_LOCK,
+    REG_COMMAND_TARGET_CURRENT,
 )
 from .exceptions import (
     HeidelbergEnergyControlAPIError,
@@ -183,26 +183,39 @@ class HeidelbergEnergyControlAPI:
 
             # Read holding registers (commands/settings)
             cmd_start = time.perf_counter()
-            command = await self._client.read_holding_registers(
-                address=REG_COMMAND_START,
-                count=REG_COMMAND_COUNT,
+            remote_lock = await self._client.read_holding_registers(
+                address=REG_COMMAND_REMOTE_LOCK,
+                count=1,
                 device_id=self._device_id,
             )
-            if command.isError():
+            if remote_lock.isError():
                 raise HeidelbergEnergyControlReadError(
-                    "Failed to read command registers"
+                    "Failed to read remote lock register"
+                )
+            target_current = await self._client.read_holding_registers(
+                address=REG_COMMAND_TARGET_CURRENT,
+                count=1,
+                device_id=self._device_id,
+            )
+            if target_current.isError():
+                raise HeidelbergEnergyControlReadError(
+                    "Failed to read remote lock register"
                 )
 
             cmd_duration = time.perf_counter() - cmd_start
 
             data_regs = data.registers
-            command_regs = command.registers
+            remote_lock_regs = remote_lock.registers
+            target_current_regs = target_current.registers
 
             if not data_regs or len(data_regs) < REG_DATA_COUNT:
+                _LOGGER.error(
+                    "Data register incomplete: expected %d registers, got %d",
+                    REG_DATA_COUNT,
+                    len(data_regs) if data_regs else 0,
+                )
                 raise HeidelbergEnergyControlReadError("Data register incomplete")
 
-            if not command_regs or len(command_regs) < REG_COMMAND_COUNT:
-                raise HeidelbergEnergyControlReadError("Command register incomplete")
 
             _LOGGER.debug(
                 "Fetch complete: DATA: %.3fs | CMD: %.3fs | Total: %.3fs",
@@ -243,8 +256,8 @@ class HeidelbergEnergyControlAPI:
                 DATA_IS_PLUGGED: data_regs[0] >= 4,
                 DATA_IS_CHARGING: data_regs[9] > 0,
                 # COMMAND
-                COMMAND_REMOTE_LOCK: command_regs[2] == 0,  # 0 = Locked / 1 = Unlocked
-                COMMAND_TARGET_CURRENT: command_regs[4] / 10.0,
+                COMMAND_REMOTE_LOCK: remote_lock_regs[0] == 0,  # 0 = Locked / 1 = Unlocked
+                COMMAND_TARGET_CURRENT: target_current_regs[0] / 10.0,
             }
 
         except (ModbusException, OSError, IndexError) as err:

@@ -67,9 +67,6 @@ REG_HW_CURR_START = 100
 # Modbus Register for hw/sw version (length 1 each)
 REG_HW_VERS = 200
 REG_SW_VERS = 203
-# Modbus Register for control
-REG_COMMAND_START = 257
-REG_COMMAND_COUNT = 6
 
 # ##### Map for charging state #####
 # Values from the heidelberg modbus docs
