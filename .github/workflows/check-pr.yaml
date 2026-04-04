@@ -2,7 +2,7 @@ name: "Validate PR"
 
 on:
   pull_request:
-    types: [opened, edited, synchronize, reopened]
+    types: [opened, edited, synchronize, reopened, ready_for_review]
 
 jobs:
   validate:
@@ -16,11 +16,12 @@ jobs:
         uses: ytanikin/pr-conventional-commits@1.4.0
         with:
           task_types: '["feat","fix","perf","docs","chore","ci"]'
-          add_label: 'true'
+          add_label: "true"
 
   task-check:
     name: Validate PR Tasks
     runs-on: ubuntu-latest
+    if: ${{ !github.event.pull_request.draft }}
     steps:
       - uses: venkatsarvesh/pr-tasks-completed-action@v1.0.0
         with:
