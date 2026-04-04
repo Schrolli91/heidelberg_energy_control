@@ -17,8 +17,8 @@
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to the wallbox",
-      "invalid_data": "Wallbox connected but did not respond (check Slave ID)",
+      "cannot_connect": "Failed to connect to the Modbus Gateway",
+      "invalid_data": "Gateway connected but Wallbox did not respond (check Slave ID)",
       "unknown_api_error": "Unexpected error while communicating with the wallbox API",
       "unknown": "Unexpected error"
     },

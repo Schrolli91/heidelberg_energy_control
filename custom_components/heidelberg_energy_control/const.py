@@ -1,5 +1,9 @@
 """Constants for the Heidelberg Energy Control integration."""
 
+from __future__ import annotations
+
+from dataclasses import dataclass
+from enum import Enum
 from homeassistant.const import Platform
 
 # ##### General #####
@@ -20,6 +24,46 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.SWITCH,
 ]
+
+# ##### Modbus Register Definitions #####
+class RegisterType(Enum):
+    INPUT = "input"
+    HOLDING = "holding"
+
+@dataclass(frozen=True)
+class RegisterDefinition:
+    """Definition of a register block."""
+    address: int
+    count: int
+    type: RegisterType
+
+# Static Data Registers (read once at startup)
+REG_DEF_LAYOUT = RegisterDefinition(address=4, count=1, type=RegisterType.INPUT)
+REG_DEF_HW_VERS = RegisterDefinition(address=200, count=1, type=RegisterType.INPUT)
+REG_DEF_SW_VERS = RegisterDefinition(address=203, count=1, type=RegisterType.INPUT)
+REG_DEF_HW_CURR = RegisterDefinition(address=100, count=2, type=RegisterType.INPUT)
+
+# Dynamic Data Registers (read frequently)
+# Detailed Data Registers (unpacked from block 5-18)
+REG_DEF_CHARGING_STATE = RegisterDefinition(address=5, count=1, type=RegisterType.INPUT)
+REG_DEF_CURRENT_L1 = RegisterDefinition(address=6, count=1, type=RegisterType.INPUT)
+REG_DEF_CURRENT_L2 = RegisterDefinition(address=7, count=1, type=RegisterType.INPUT)
+REG_DEF_CURRENT_L3 = RegisterDefinition(address=8, count=1, type=RegisterType.INPUT)
+REG_DEF_PCB_TEMPERATURE = RegisterDefinition(address=9, count=1, type=RegisterType.INPUT)
+REG_DEF_VOLTAGE_L1 = RegisterDefinition(address=10, count=1, type=RegisterType.INPUT)
+REG_DEF_VOLTAGE_L2 = RegisterDefinition(address=11, count=1, type=RegisterType.INPUT)
+REG_DEF_VOLTAGE_L3 = RegisterDefinition(address=12, count=1, type=RegisterType.INPUT)
+REG_DEF_EXTERNAL_LOCK_STATE = RegisterDefinition(address=13, count=1, type=RegisterType.INPUT)
+REG_DEF_CHARGING_POWER = RegisterDefinition(address=14, count=1, type=RegisterType.INPUT)
+# 32-bit values require 2 registers
+REG_DEF_ENERGY_SINCE_POWER_ON = RegisterDefinition(address=15, count=2, type=RegisterType.INPUT)
+REG_DEF_TOTAL_ENERGY = RegisterDefinition(address=17, count=2, type=RegisterType.INPUT)
+
+# Command registers
+REG_DEF_REMOTE_LOCK = RegisterDefinition(address=259, count=1, type=RegisterType.HOLDING)
+REG_DEF_TARGET_CURRENT = RegisterDefinition(address=261, count=1, type=RegisterType.HOLDING)
+
+
 
 # ##### Data Keys #####
 # Init Data
@@ -49,24 +93,10 @@ DATA_IS_PLUGGED = "is_plugged"
 DATA_IS_CHARGING = "is_charging"
 # Hardware Command
 COMMAND_REMOTE_LOCK = "remote_lock_command"
-REG_COMMAND_REMOTE_LOCK = 259
 COMMAND_TARGET_CURRENT = "max_current_command"
-REG_COMMAND_TARGET_CURRENT = 261
 # Virtual
 VIRTUAL_ENABLE = "virtual_enable"
 VIRTUAL_TARGET_CURRENT = "virtual_current"
-
-# ##### Modbus registers #####
-# Modbus Register-Layouts Version (length 1)
-REG_LAYOUT = 4
-# Modbus Register for wallbox sensors
-REG_DATA_START = 5
-REG_DATA_COUNT = 14
-# Modbus Register for hw current settings (length 2)
-REG_HW_CURR_START = 100
-# Modbus Register for hw/sw version (length 1 each)
-REG_HW_VERS = 200
-REG_SW_VERS = 203
 
 # ##### Map for charging state #####
 # Values from the heidelberg modbus docs

@@ -20,7 +20,7 @@ from .const import (
     DATA_REG_LAYOUT_VER,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
-    REG_COMMAND_TARGET_CURRENT,
+    REG_DEF_TARGET_CURRENT,
     VIRTUAL_ENABLE,
     VIRTUAL_TARGET_CURRENT,
 )
@@ -40,7 +40,7 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
         self,
         hass: HomeAssistant,
         api: Any,
-        static_data: dict[str, str],
+        static_data: dict[str, Any],
         entry: ConfigEntry,
     ) -> None:
         """Initialize the coordinator."""
@@ -150,7 +150,7 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
         modbus_value = int(value * 10.0)
         try:
             await self.api.async_write_register(
-                REG_COMMAND_TARGET_CURRENT, modbus_value
+                REG_DEF_TARGET_CURRENT.address, modbus_value
             )
 
             # Update local state for immediate UI feedback

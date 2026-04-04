@@ -4,15 +4,13 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import Any
+from typing import Any, List, Dict
 
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
 
 from ..const import (
     CHARGING_STATE_MAP,
-    COMMAND_REMOTE_LOCK,
-    COMMAND_TARGET_CURRENT,
     DATA_CHARGING_POWER,
     DATA_CHARGING_STATE,
     DATA_CURRENT,
@@ -34,14 +32,28 @@ from ..const import (
     DATA_VOLTAGE_L1,
     DATA_VOLTAGE_L2,
     DATA_VOLTAGE_L3,
-    REG_DATA_COUNT,
-    REG_DATA_START,
-    REG_HW_CURR_START,
-    REG_HW_VERS,
-    REG_SW_VERS,
-    REG_LAYOUT,
-    REG_COMMAND_REMOTE_LOCK,
-    REG_COMMAND_TARGET_CURRENT,
+    REG_DEF_CHARGING_POWER,
+    REG_DEF_CHARGING_STATE,
+    REG_DEF_CURRENT_L1,
+    REG_DEF_CURRENT_L2,
+    REG_DEF_CURRENT_L3,
+    REG_DEF_ENERGY_SINCE_POWER_ON,
+    REG_DEF_EXTERNAL_LOCK_STATE,
+    REG_DEF_HW_CURR,
+    REG_DEF_HW_VERS,
+    REG_DEF_LAYOUT,
+    REG_DEF_PCB_TEMPERATURE,
+    REG_DEF_REMOTE_LOCK,
+    REG_DEF_SW_VERS,
+    REG_DEF_TARGET_CURRENT,
+    REG_DEF_TOTAL_ENERGY,
+    REG_DEF_VOLTAGE_L1,
+    REG_DEF_VOLTAGE_L2,
+    REG_DEF_VOLTAGE_L3,
+    RegisterDefinition,
+    RegisterType,
+    COMMAND_REMOTE_LOCK,
+    COMMAND_TARGET_CURRENT,
 )
 from .exceptions import (
     HeidelbergEnergyControlAPIError,
@@ -88,54 +100,101 @@ class HeidelbergEnergyControlAPI:
         if self._client.connected:
             self._client.close()
 
-    async def async_get_static_data(self) -> dict[str, str] | None:
-        """Read the static data and return if successful."""
+    async def async_read_registers(
+        self, definitions: List[RegisterDefinition]
+    ) -> Dict[int, int]:
+        """Read multiple register blocks efficiently.
+
+        Args:
+            definitions: List of register definitions to read.
+
+        Returns:
+            Dict mapping register address to value.
+        """
         await self.connect()
+
+        result = {}
+
+        # Sort definitions by type then address to maximize consecutive reads
+        sorted_defs = sorted(definitions, key=lambda d: (d.type.value, d.address))
+
+        i = 0
+        while i < len(sorted_defs):
+            current_def = sorted_defs[i]
+
+            # Start a new block
+            start_addr = current_def.address
+            end_addr = current_def.address + current_def.count
+            merge_count = 1
+
+            # Check if we can merge with next definitions
+            while i + merge_count < len(sorted_defs):
+                next_def = sorted_defs[i + merge_count]
+                # Check if consecutive and same type
+                if (
+                    next_def.address == end_addr
+                    and next_def.type == current_def.type
+                ):
+                    end_addr += next_def.count
+                    merge_count += 1
+                else:
+                    break
+
+            # Calculate total count for the merged block
+            total_count = end_addr - start_addr
+
+            # Perform read
+            if current_def.type == RegisterType.INPUT:
+                read_func = self._client.read_input_registers
+            else:
+                read_func = self._client.read_holding_registers
+
+            read_result = await read_func(
+                address=start_addr, count=total_count, device_id=self._device_id
+            )
+
+            if read_result.isError():
+                raise HeidelbergEnergyControlReadError(
+                    f"Failed to read registers at {start_addr}"
+                )
+
+            # Map results to individual addresses
+            offset = 0
+            for j in range(merge_count):
+                def_obj = sorted_defs[i + j]
+                for k in range(def_obj.count):
+                    result[def_obj.address + k] = read_result.registers[offset + k]
+                offset += def_obj.count
+
+            i += merge_count
+
+        return result
+
+    async def async_get_static_data(self) -> dict[str, Any] | None:
+        """Read the static data and return if successful."""
         try:
-            # Read layout version
-            layout_result = await self._client.read_input_registers(
-                address=REG_LAYOUT, count=1, device_id=self._device_id
-            )
-            if layout_result.isError():
-                raise HeidelbergEnergyControlReadError("Failed to read LAYOUT register")
-
-            # Read hardware version
-            hw_vers_result = await self._client.read_input_registers(
-                address=REG_HW_VERS, count=1, device_id=self._device_id
-            )
-            if hw_vers_result.isError():
-                raise HeidelbergEnergyControlReadError(
-                    "Failed to read HW_VERSION register"
-                )
-
-            # Read software version
-            sw_vers_result = await self._client.read_input_registers(
-                address=REG_SW_VERS, count=1, device_id=self._device_id
-            )
-            if sw_vers_result.isError():
-                raise HeidelbergEnergyControlReadError(
-                    "Failed to read SW_VERSION register"
-                )
-
-            # Read hardware current limits
-            hw_curr_result = await self._client.read_input_registers(
-                address=REG_HW_CURR_START, count=2, device_id=self._device_id
-            )
-            if hw_curr_result.isError():
-                raise HeidelbergEnergyControlReadError(
-                    "Failed to read HW_CURRENT register"
-                )
+            definitions = [
+                REG_DEF_LAYOUT,
+                REG_DEF_HW_VERS,
+                REG_DEF_SW_VERS,
+                REG_DEF_HW_CURR,
+            ]
+            registers = await self.async_read_registers(definitions)
 
             return {
                 DATA_REG_LAYOUT_VER: self._register_to_version(
-                    layout_result.registers[0]
+                    registers[REG_DEF_LAYOUT.address]
                 ),
-                DATA_HW_VERSION: self._register_to_version(hw_vers_result.registers[0]),
-                DATA_SW_VERSION: self._register_to_version(sw_vers_result.registers[0]),
-                DATA_HW_MAX_CURR: hw_curr_result.registers[0],
-                DATA_HW_MIN_CURR: hw_curr_result.registers[1],
+                DATA_HW_VERSION: self._register_to_version(
+                    registers[REG_DEF_HW_VERS.address]
+                ),
+                DATA_SW_VERSION: self._register_to_version(
+                    registers[REG_DEF_SW_VERS.address]
+                ),
+                DATA_HW_MAX_CURR: registers[REG_DEF_HW_CURR.address],
+                DATA_HW_MIN_CURR: registers[REG_DEF_HW_CURR.address + 1],
             }
-        except (ModbusException, OSError, IndexError) as err:
+        except (ModbusException, OSError, IndexError, KeyError) as err:
             _LOGGER.error("Error fetching static wallbox data: %s", err)
             raise HeidelbergEnergyControlReadError(
                 f"Failed to fetch static wallbox data: {err}"
@@ -171,108 +230,98 @@ class HeidelbergEnergyControlAPI:
         await self.connect()
 
         try:
-            # Read input registers (data)
-            data_start = time.perf_counter()
-            data = await self._client.read_input_registers(
-                address=REG_DATA_START, count=REG_DATA_COUNT, device_id=self._device_id
-            )
-            if data.isError():
-                raise HeidelbergEnergyControlReadError("Failed to read data registers")
+            # Define registers to read (detailed definitions)
+            definitions = [
+                REG_DEF_CHARGING_STATE,
+                REG_DEF_CURRENT_L1,
+                REG_DEF_CURRENT_L2,
+                REG_DEF_CURRENT_L3,
+                REG_DEF_PCB_TEMPERATURE,
+                REG_DEF_VOLTAGE_L1,
+                REG_DEF_VOLTAGE_L2,
+                REG_DEF_VOLTAGE_L3,
+                REG_DEF_EXTERNAL_LOCK_STATE,
+                REG_DEF_CHARGING_POWER,
+                REG_DEF_ENERGY_SINCE_POWER_ON,
+                REG_DEF_TOTAL_ENERGY,
+                REG_DEF_REMOTE_LOCK,
+                REG_DEF_TARGET_CURRENT,
+            ]
 
-            data_duration = time.perf_counter() - data_start
-
-            # Read holding registers (commands/settings)
-            cmd_start = time.perf_counter()
-            remote_lock = await self._client.read_holding_registers(
-                address=REG_COMMAND_REMOTE_LOCK,
-                count=1,
-                device_id=self._device_id,
-            )
-            if remote_lock.isError():
-                raise HeidelbergEnergyControlReadError(
-                    "Failed to read remote lock register"
-                )
-            target_current = await self._client.read_holding_registers(
-                address=REG_COMMAND_TARGET_CURRENT,
-                count=1,
-                device_id=self._device_id,
-            )
-            if target_current.isError():
-                raise HeidelbergEnergyControlReadError(
-                    "Failed to read remote lock register"
-                )
-
-            cmd_duration = time.perf_counter() - cmd_start
-
-            data_regs = data.registers
-            remote_lock_regs = remote_lock.registers
-            target_current_regs = target_current.registers
-
-            if not data_regs or len(data_regs) < REG_DATA_COUNT:
-                _LOGGER.error(
-                    "Data register incomplete: expected %d registers, got %d",
-                    REG_DATA_COUNT,
-                    len(data_regs) if data_regs else 0,
-                )
-                raise HeidelbergEnergyControlReadError("Data register incomplete")
-
+            # Read all registers efficiently
+            read_start = time.perf_counter()
+            registers = await self.async_read_registers(definitions)
+            read_duration = time.perf_counter() - read_start
 
             _LOGGER.debug(
-                "Fetch complete: DATA: %.3fs | CMD: %.3fs | Total: %.3fs",
-                data_duration,
-                cmd_duration,
-                time.perf_counter() - all_start,
+                "Fetch complete: Total: %.3fs",
+                read_duration,
             )
 
-            curr_l1 = data_regs[1] / 10.0
-            curr_l2 = data_regs[2] / 10.0
-            curr_l3 = data_regs[3] / 10.0
-
-            active_phases = sum(1 for i in [curr_l1, curr_l2, curr_l3] if i > 0.1)
+            active_phases = sum(
+                1
+                for i in [
+                    registers[REG_DEF_CURRENT_L1.address] / 10.0,
+                    registers[REG_DEF_CURRENT_L2.address] / 10.0,
+                    registers[REG_DEF_CURRENT_L3.address] / 10.0,
+                ]
+                if i > 0.1
+            )
             charge_current = round(
-                (curr_l1 + curr_l2 + curr_l3) / max(1, active_phases), 2
+                (
+                    registers[REG_DEF_CURRENT_L1.address] / 10.0
+                    + registers[REG_DEF_CURRENT_L2.address] / 10.0
+                    + registers[REG_DEF_CURRENT_L3.address] / 10.0
+                )
+                / max(1, active_phases),
+                2,
             )
 
             return {
-                # DATA
                 DATA_CHARGING_STATE: CHARGING_STATE_MAP.get(
-                    data_regs[0], f"Unknown ({data_regs[0]})"
+                    registers[REG_DEF_CHARGING_STATE.address],
+                    f"Unknown ({registers[REG_DEF_CHARGING_STATE.address]})",
                 ),
                 DATA_PHASES_ACTIVE: active_phases,
                 DATA_CURRENT: charge_current,
-                DATA_CURRENT_L1: curr_l1,
-                DATA_CURRENT_L2: curr_l2,
-                DATA_CURRENT_L3: curr_l3,
-                DATA_PCB_TEMPERATURE: data_regs[4] / 10.0,
-                DATA_VOLTAGE_L1: data_regs[5],
-                DATA_VOLTAGE_L2: data_regs[6],
-                DATA_VOLTAGE_L3: data_regs[7],
-                DATA_CHARGING_POWER: data_regs[9],
-                DATA_ENERGY_SINCE_POWER_ON: self._to_32bit(data_regs, 10) / 1000.0,
-                DATA_TOTAL_ENERGY: self._to_32bit(data_regs, 12) / 1000.0,
-                # Binary Sensors
-                DATA_EXTERNAL_LOCK_STATE: data_regs[8]
-                == 0,  # 0 = Locked / 1 = Unlocked
-                DATA_IS_PLUGGED: data_regs[0] >= 4,
-                DATA_IS_CHARGING: data_regs[9] > 0,
-                # COMMAND
-                COMMAND_REMOTE_LOCK: remote_lock_regs[0] == 0,  # 0 = Locked / 1 = Unlocked
-                COMMAND_TARGET_CURRENT: target_current_regs[0] / 10.0,
+                DATA_CURRENT_L1: registers[REG_DEF_CURRENT_L1.address] / 10.0,
+                DATA_CURRENT_L2: registers[REG_DEF_CURRENT_L2.address] / 10.0,
+                DATA_CURRENT_L3: registers[REG_DEF_CURRENT_L3.address] / 10.0,
+                DATA_PCB_TEMPERATURE: registers[REG_DEF_PCB_TEMPERATURE.address] / 10.0,
+                DATA_VOLTAGE_L1: registers[REG_DEF_VOLTAGE_L1.address],
+                DATA_VOLTAGE_L2: registers[REG_DEF_VOLTAGE_L2.address],
+                DATA_VOLTAGE_L3: registers[REG_DEF_VOLTAGE_L3.address],
+                DATA_CHARGING_POWER: registers[REG_DEF_CHARGING_POWER.address],
+                DATA_ENERGY_SINCE_POWER_ON: self._to_32bit_from_map(
+                    registers, REG_DEF_ENERGY_SINCE_POWER_ON.address
+                )
+                / 1000.0,
+                DATA_TOTAL_ENERGY: self._to_32bit_from_map(
+                    registers, REG_DEF_TOTAL_ENERGY.address
+                )
+                / 1000.0,
+                DATA_EXTERNAL_LOCK_STATE: registers[REG_DEF_EXTERNAL_LOCK_STATE.address]
+                == 0,
+                DATA_IS_PLUGGED: registers[REG_DEF_CHARGING_STATE.address] >= 4,
+                DATA_IS_CHARGING: registers[REG_DEF_CHARGING_POWER.address] > 0,
+                COMMAND_REMOTE_LOCK: registers[REG_DEF_REMOTE_LOCK.address] == 0,
+                COMMAND_TARGET_CURRENT: registers[REG_DEF_TARGET_CURRENT.address]
+                / 10.0,
             }
 
-        except (ModbusException, OSError, IndexError) as err:
+        except (ModbusException, OSError, IndexError, KeyError) as err:
             _LOGGER.error("Error fetching wallbox data: %s", err)
             raise HeidelbergEnergyControlReadError(
                 f"Failed to fetch wallbox data: {err}"
             ) from err
 
-    def _to_32bit(self, regs: list[int], idx_high: int) -> int:
-        """Helper to combine two 16-bit registers to 32-bit."""
-        if idx_high + 1 >= len(regs):
+    def _to_32bit_from_map(self, regs: Dict[int, int], addr_high: int) -> int:
+        """Helper to combine two 16-bit registers from a map to 32-bit."""
+        if addr_high + 1 not in regs:
             raise HeidelbergEnergyControlAPIError(
-                f"Index {idx_high} out of bounds for 32-bit conversion"
+                f"Address {addr_high} or {addr_high + 1} not found for 32-bit conversion"
             )
-        return (regs[idx_high] << 16) | regs[idx_high + 1]
+        return (regs[addr_high] << 16) | regs[addr_high + 1]
 
     def _register_to_version(self, decimal_value: int) -> str:
         """Convert register decimal value to semver string."""
