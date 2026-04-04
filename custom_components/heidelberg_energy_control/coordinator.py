@@ -68,6 +68,7 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
         self.target_current: float = default_current
         self.logic_enabled: bool = False
         self._initial_fetch_done: bool = False
+        self._consecutive_empty_responses: int = 0
 
         # Initialize data dictionary
         self.data: dict[str, Any] = {
@@ -82,12 +83,15 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
             # Fetch all registers from the wallbox via Modbus API
             data = await self.api.async_get_data()
             if not data:
+                self._consecutive_empty_responses += 1
                 _LOGGER.warning(
-                    "Empty data response from wallbox, keeping previous state"
+                    "Empty data response from wallbox (consecutive count: %s), keeping previous state",
+                    self._consecutive_empty_responses,
                 )
-                # TODO: use UpdateFailed to signal unavailability.
-                # Do this witch a counter to prevent marking the device as unavailable on every hicups.
-                # Maybe only after 3 consecutive failures?
+                if self._consecutive_empty_responses >= 3:
+                    raise UpdateFailed(
+                        "Wallbox returned empty data for 3 consecutive updates"
+                    )
                 return self.data
 
             # If virtual logic is not supported, just return raw data (Legacy Mode)
@@ -123,6 +127,9 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
             # Ensure virtual states are always synced into the data dict for the generic UI entities
             data[VIRTUAL_ENABLE] = self.logic_enabled
             data[VIRTUAL_TARGET_CURRENT] = self.target_current
+
+            # Reset consecutive empty response counter on successful update
+            self._consecutive_empty_responses = 0
 
             # Note: COMMAND_TARGET_CURRENT remains the raw hardware value (will show 0.0 when logic is off)
             return data
