@@ -13,7 +13,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import HeidelbergEnergyControlConfigEntry
 from .classes.heidelberg_switch import HeidelbergSwitch
 from .classes.heidelberg_switch_virtual import HeidelbergSwitchVirtual
-from .const import COMMAND_REMOTE_LOCK, REG_COMMAND_REMOTE_LOCK, VIRTUAL_ENABLE
+from .const import COMMAND_REMOTE_LOCK, REG_DEF_REMOTE_LOCK, VIRTUAL_ENABLE
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -34,7 +34,7 @@ SWITCH_TYPES: tuple[HeidelbergSwitchEntityDescription, ...] = (
         translation_key=COMMAND_REMOTE_LOCK,
         icon="mdi:lock",
         entity_category=EntityCategory.CONFIG,
-        register=REG_COMMAND_REMOTE_LOCK,
+        register=REG_DEF_REMOTE_LOCK.address,
         on_value=0,
         off_value=1,
         min_version="1.0.4"
