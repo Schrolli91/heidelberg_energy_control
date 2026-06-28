@@ -13,6 +13,7 @@ from ..const import (
     CHARGING_STATE_MAP,
     COMMAND_REMOTE_LOCK,
     COMMAND_TARGET_CURRENT,
+    COMMAND_STANDBY,
     DATA_CHARGING_POWER,
     DATA_CHARGING_STATE,
     DATA_CURRENT,
@@ -40,6 +41,7 @@ from ..const import (
     REG_HW_VERS,
     REG_SW_VERS,
     REG_LAYOUT,
+    REG_COMMAND_STANDBY,
     REG_COMMAND_REMOTE_LOCK,
     REG_COMMAND_TARGET_CURRENT,
 )
@@ -201,12 +203,22 @@ class HeidelbergEnergyControlAPI:
                 raise HeidelbergEnergyControlReadError(
                     "Failed to read remote lock register"
                 )
+            standby = await self._client.read_holding_registers(
+                address=REG_COMMAND_STANDBY,
+                count=1,
+                device_id=self._device_id,
+            )
+            if standby.isError():
+                raise HeidelbergEnergyControlReadError(
+                    "Failed to read standby register"
+                )
 
             cmd_duration = time.perf_counter() - cmd_start
 
             data_regs = data.registers
             remote_lock_regs = remote_lock.registers
             target_current_regs = target_current.registers
+            standby_regs = standby.registers
 
             if not data_regs or len(data_regs) < REG_DATA_COUNT:
                 _LOGGER.error(
@@ -258,6 +270,7 @@ class HeidelbergEnergyControlAPI:
                 # COMMAND
                 COMMAND_REMOTE_LOCK: remote_lock_regs[0] == 0,  # 0 = Locked / 1 = Unlocked
                 COMMAND_TARGET_CURRENT: target_current_regs[0] / 10.0,
+                COMMAND_STANDBY: standby_regs[0] == 0,  # 0 = enabled / 4 = disabled
             }
 
         except (ModbusException, OSError, IndexError) as err:

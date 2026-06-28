@@ -121,6 +121,9 @@
       }
     },
     "switch": {
+      "standby_function_control": {
+        "name": "Standby-Modus"
+      },
       "remote_lock_command": {
         "name": "Remote Lock"
       },

@@ -54,6 +54,7 @@ This integration provides a comprehensive set of entities to monitor and control
 
 #### 🎮 Controls
 * **Charge Enable**: Toggle to start or stop the charging process.
+* **Standby Mode**: Enable or disable the wallbox power-saving standby function.
 * **Charging Current Limit**: Adjust the maximum allowed charging current (6A - 16A).
 * **Remote Lock**: Disable and lock the charging process to prevent unauthorized use.
 
