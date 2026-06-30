@@ -1,0 +1,10 @@
+{
+  "_comment": "Real capture from a connect-series v2.0.4 wallbox (layout register 4 = 0x204). Vehicle plugged in, state 'C', single-phase install (only L1 wired), idle at minimum target current 6.0 A — currents and active power are 0.",
+  "input_4_layout": [516],
+  "input_5_18_data": [7, 0, 0, 0, 362, 237, 1, 1, 1, 1, 0, 0, 0, 3615],
+  "input_100_101_hw_curr": [16, 6],
+  "input_200_hw_vers": [3],
+  "input_203_sw_vers": [3],
+  "holding_259_remote_lock": [1],
+  "holding_261_target_current": [60]
+}

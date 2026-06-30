@@ -1,0 +1,19 @@
+{
+  "_comment": "PLACEHOLDER fixture — replace with a real capture from scripts/capture_fixture.py before opening PR. Hand-crafted to be internally consistent (3-phase charging at ~11 kW, target 16 A, total energy 12345.600 kWh from the 32-bit pair high=188, low=24832 since (188<<16)|24832 == 12345600).",
+  "input_4_layout": [263],
+  "input_5_18_data": [
+    6,
+    160, 160, 160,
+    345,
+    230, 231, 229,
+    1,
+    11040,
+    0, 5000,
+    188, 24832
+  ],
+  "input_100_101_hw_curr": [16, 6],
+  "input_200_hw_vers": [256],
+  "input_203_sw_vers": [263],
+  "holding_259_remote_lock": [1],
+  "holding_261_target_current": [160]
+}
