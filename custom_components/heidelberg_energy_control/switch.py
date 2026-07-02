@@ -14,13 +14,14 @@ from . import HeidelbergEnergyControlConfigEntry
 from .classes.heidelberg_switch import HeidelbergSwitch
 from .classes.heidelberg_switch_virtual import HeidelbergSwitchVirtual
 from .const import COMMAND_REMOTE_LOCK, REG_COMMAND_REMOTE_LOCK, VIRTUAL_ENABLE
+from .core.capabilities import Capability, CoreCapability
 
 
 @dataclass(frozen=True, kw_only=True)
 class HeidelbergSwitchEntityDescription(SwitchEntityDescription):
     """Class describing Heidelberg switch entities."""
 
-    min_version: str | None = None
+    capability: type[Capability]
 
     # Make these optional so virtual switches don't need them
     register: int | None = None
@@ -37,13 +38,13 @@ SWITCH_TYPES: tuple[HeidelbergSwitchEntityDescription, ...] = (
         register=REG_COMMAND_REMOTE_LOCK,
         on_value=0,
         off_value=1,
-        min_version="1.0.4"
+        capability=CoreCapability,
     ),
     HeidelbergSwitchEntityDescription(
         key=VIRTUAL_ENABLE,
         translation_key=VIRTUAL_ENABLE,
         icon="mdi:power",
-        min_version="1.0.7" # depends on COMMAND_TARGET_CURRENT
+        capability=CoreCapability,
     ),
 )
 
@@ -56,12 +57,16 @@ async def async_setup_entry(
     """Set up the switch platform."""
     coordinator = entry.runtime_data
     entities: list[SwitchEntity] = []
+    loaded_types = {type(c) for c in coordinator.api.capabilities}
 
     for description in SWITCH_TYPES:
-        if coordinator.is_supported(description.min_version, description.key):
-            if description.key == VIRTUAL_ENABLE:
-                entities.append(HeidelbergSwitchVirtual(coordinator, entry, description))
-            else:
-                entities.append(HeidelbergSwitch(coordinator, entry, description))
+        if description.capability not in loaded_types:
+            continue
+        if description.key == VIRTUAL_ENABLE:
+            if not coordinator.supports_virtual_logic:
+                continue
+            entities.append(HeidelbergSwitchVirtual(coordinator, entry, description))
+        else:
+            entities.append(HeidelbergSwitch(coordinator, entry, description))
 
     async_add_entities(entities)

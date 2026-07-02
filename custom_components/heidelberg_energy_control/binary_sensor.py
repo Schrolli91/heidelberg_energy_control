@@ -16,13 +16,14 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import HeidelbergEnergyControlConfigEntry
 from .classes.heidelberg_binary_sensor import HeidelbergBinarySensor
 from .const import DATA_EXTERNAL_LOCK_STATE, DATA_IS_CHARGING, DATA_IS_PLUGGED
+from .core.capabilities import Capability, CoreCapability
 
 
 @dataclass(frozen=True, kw_only=True)
 class HeidelbergBinarySensorEntityDescription(BinarySensorEntityDescription):
     """Class describing Heidelberg binary sensor entities."""
 
-    min_version: str | None = None
+    capability: type[Capability]
 
 
 BINARY_SENSOR_TYPES: tuple[HeidelbergBinarySensorEntityDescription, ...] = (
@@ -31,19 +32,19 @@ BINARY_SENSOR_TYPES: tuple[HeidelbergBinarySensorEntityDescription, ...] = (
         translation_key=DATA_EXTERNAL_LOCK_STATE,
         device_class=BinarySensorDeviceClass.SAFETY,
         entity_category=EntityCategory.DIAGNOSTIC,
-        min_version="1.0.0"
+        capability=CoreCapability,
     ),
     HeidelbergBinarySensorEntityDescription(
         key=DATA_IS_PLUGGED,
         translation_key=DATA_IS_PLUGGED,
         device_class=BinarySensorDeviceClass.PLUG,
-        min_version="1.0.0" # depends on chargingstate sensor
+        capability=CoreCapability,
     ),
     HeidelbergBinarySensorEntityDescription(
         key=DATA_IS_CHARGING,
         translation_key=DATA_IS_CHARGING,
         device_class=BinarySensorDeviceClass.BATTERY_CHARGING,
-        min_version="1.0.0" # depends on chargingstate sensor
+        capability=CoreCapability,
     ),
 )
 
@@ -56,9 +57,10 @@ async def async_setup_entry(
     """Set up the binary sensor platform."""
     coordinator = entry.runtime_data
     entities: list[BinarySensorEntity] = []
+    loaded_types = {type(c) for c in coordinator.api.capabilities}
 
     for description in BINARY_SENSOR_TYPES:
-        if coordinator.is_supported(description.min_version, description.key):
+        if description.capability in loaded_types:
             entities.append(HeidelbergBinarySensor(coordinator, entry, description))
 
     async_add_entities(entities)

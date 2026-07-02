@@ -47,6 +47,7 @@ from .const import (
     DATA_VOLTAGE_L2,
     DATA_VOLTAGE_L3,
 )
+from .core.capabilities import Capability, CoreCapability
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ _LOGGER = logging.getLogger(__name__)
 class HeidelbergSensorEntityDescription(SensorEntityDescription):
     """Class describing Heidelberg sensor entities."""
 
-    min_version: str | None = None
+    capability: type[Capability]
 
 
 SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
@@ -64,7 +65,7 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         translation_key=DATA_CHARGING_STATE,
         icon="mdi:ev-station",
         entity_category=EntityCategory.DIAGNOSTIC,
-        min_version="1.0.0"
+        capability=CoreCapability,
     ),
     HeidelbergSensorEntityDescription(
         key=DATA_CHARGING_POWER,
@@ -72,7 +73,7 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         native_unit_of_measurement=UnitOfPower.WATT,
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
-        min_version="1.0.4"
+        capability=CoreCapability,
     ),
     HeidelbergSensorEntityDescription(
         key=DATA_TOTAL_ENERGY,
@@ -82,7 +83,7 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         state_class=SensorStateClass.TOTAL_INCREASING,
         entity_category=EntityCategory.DIAGNOSTIC,
         suggested_display_precision=1,
-        min_version="1.0.7"
+        capability=CoreCapability,
     ),
     HeidelbergSensorEntityDescription(
         key=DATA_SESSION_ENERGY,
@@ -91,7 +92,7 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         suggested_display_precision=2,
-        min_version="1.0.7" # depends on TOTAL_ENERGY
+        capability=CoreCapability,
     ),
     HeidelbergSensorEntityDescription(
         key=DATA_ENERGY_SINCE_POWER_ON,
@@ -102,7 +103,7 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         suggested_display_precision=1,
         entity_registry_enabled_default=False,
-        min_version="1.0.4"
+        capability=CoreCapability,
     ),
     HeidelbergSensorEntityDescription(
         key=DATA_CURRENT,
@@ -112,7 +113,7 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         suggested_display_precision=1,
-        min_version="1.0.0" # depends on single phase currents
+        capability=CoreCapability,
     ),
     HeidelbergSensorEntityDescription(
         key=DATA_CURRENT_L1,
@@ -123,7 +124,7 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         suggested_display_precision=1,
         entity_registry_enabled_default=False,
-        min_version="1.0.0"
+        capability=CoreCapability,
     ),
     HeidelbergSensorEntityDescription(
         key=DATA_CURRENT_L2,
@@ -134,7 +135,7 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         suggested_display_precision=1,
         entity_registry_enabled_default=False,
-        min_version="1.0.0"
+        capability=CoreCapability,
     ),
     HeidelbergSensorEntityDescription(
         key=DATA_CURRENT_L3,
@@ -145,7 +146,7 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         suggested_display_precision=1,
         entity_registry_enabled_default=False,
-        min_version="1.0.0"
+        capability=CoreCapability,
     ),
     HeidelbergSensorEntityDescription(
         key=DATA_VOLTAGE_L1,
@@ -155,7 +156,7 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
-        min_version="1.0.0"
+        capability=CoreCapability,
     ),
     HeidelbergSensorEntityDescription(
         key=DATA_VOLTAGE_L2,
@@ -165,7 +166,7 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
-        min_version="1.0.0"
+        capability=CoreCapability,
     ),
     HeidelbergSensorEntityDescription(
         key=DATA_VOLTAGE_L3,
@@ -175,7 +176,7 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
-        min_version="1.0.0"
+        capability=CoreCapability,
     ),
     HeidelbergSensorEntityDescription(
         key=DATA_PHASES_ACTIVE,
@@ -184,7 +185,7 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
-        min_version="1.0.0" # depends on single phase currents
+        capability=CoreCapability,
     ),
     HeidelbergSensorEntityDescription(
         key=DATA_PCB_TEMPERATURE,
@@ -194,7 +195,7 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
-        min_version="1.0.0"
+        capability=CoreCapability,
     ),
     HeidelbergSensorEntityDescription(
         key=COMMAND_TARGET_CURRENT,
@@ -204,7 +205,7 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         suggested_display_precision=1,
-        min_version="1.0.7"
+        capability=CoreCapability,
     ),
     HeidelbergSensorEntityDescription(
         key=DATA_HW_MAX_CURR,
@@ -215,7 +216,7 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         suggested_display_precision=1,
         entity_registry_enabled_default=False,
-        min_version="1.0.0"
+        capability=CoreCapability,
     ),
     HeidelbergSensorEntityDescription(
         key=DATA_HW_MIN_CURR,
@@ -226,7 +227,7 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         entity_category=EntityCategory.DIAGNOSTIC,
         suggested_display_precision=1,
         entity_registry_enabled_default=False,
-        min_version="1.0.0"
+        capability=CoreCapability,
     ),
 )
 
@@ -239,9 +240,10 @@ async def async_setup_entry(
     """Set up the sensor platform."""
     coordinator = entry.runtime_data
     entities: list[SensorEntity] = []
+    loaded_types = {type(c) for c in coordinator.api.capabilities}
 
     for description in SENSOR_TYPES:
-        if coordinator.is_supported(description.min_version, description.key):
+        if description.capability in loaded_types:
             if description.key == DATA_TOTAL_ENERGY:
                 entities.append(
                     HeidelbergSensorEnergyTotal(coordinator, entry, description)
