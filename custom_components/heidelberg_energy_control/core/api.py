@@ -29,6 +29,7 @@ from .exceptions import (
     HeidelbergEnergyControlReadError,
     HeidelbergEnergyControlWriteError,
 )
+from .registers import RegisterDefinition, RegisterType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -77,6 +78,77 @@ class HeidelbergEnergyControlAPI:
     def capabilities(self) -> list[Capability]:
         """Loaded capabilities, in registration order."""
         return list(self._capabilities)
+
+    async def async_read_registers(
+        self, definitions: list[RegisterDefinition]
+    ) -> dict[int, int]:
+        """Read every register described by `definitions` in as few Modbus calls as possible.
+
+        Sorts definitions by (type, address) and coalesces consecutive
+        same-type reads into single block transactions. Returns a dict
+        keyed by absolute register address, so a capability that
+        declared `RegisterDefinition(15, 2, INPUT)` decodes as
+        `regs[15]` and `regs[16]`.
+
+        Duplicate definitions are tolerated (the merge simply reads
+        the address once). Non-consecutive addresses become separate
+        block reads.
+        """
+        await self.connect()
+
+        result: dict[int, int] = {}
+        if not definitions:
+            return result
+
+        # Deduplicate first so overlapping definitions don't split a block.
+        unique = list({(d.type, d.address, d.count): d for d in definitions}.values())
+        sorted_defs = sorted(unique, key=lambda d: (d.type.value, d.address))
+
+        i = 0
+        while i < len(sorted_defs):
+            current = sorted_defs[i]
+            start_addr = current.address
+            end_addr = current.address + current.count
+            merge_count = 1
+
+            while i + merge_count < len(sorted_defs):
+                nxt = sorted_defs[i + merge_count]
+                if nxt.type == current.type and nxt.address == end_addr:
+                    end_addr += nxt.count
+                    merge_count += 1
+                else:
+                    break
+
+            total_count = end_addr - start_addr
+            try:
+                if current.type == RegisterType.INPUT:
+                    read_result = await self._client.read_input_registers(
+                        address=start_addr,
+                        count=total_count,
+                        device_id=self._device_id,
+                    )
+                else:
+                    read_result = await self._client.read_holding_registers(
+                        address=start_addr,
+                        count=total_count,
+                        device_id=self._device_id,
+                    )
+            except (ModbusException, OSError) as err:
+                raise HeidelbergEnergyControlReadError(
+                    f"Failed to read {total_count} {current.type.value} register(s) at {start_addr}: {err}"
+                ) from err
+
+            if read_result.isError():
+                raise HeidelbergEnergyControlReadError(
+                    f"Failed to read {total_count} {current.type.value} register(s) at {start_addr}"
+                )
+
+            for offset in range(total_count):
+                result[start_addr + offset] = read_result.registers[offset]
+
+            i += merge_count
+
+        return result
 
     async def async_get_static_data(self) -> dict[str, Any] | None:
         """Read static data via the core capability, then load the rest.
