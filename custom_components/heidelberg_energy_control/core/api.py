@@ -155,19 +155,20 @@ class HeidelbergEnergyControlAPI:
 
         Layout version is needed to gate the remaining capabilities by
         `min_layout_version`, so the core capability is read first and
-        unconditionally — its `min_layout_version` is None.
+        unconditionally — its `min_layout_version` is None. Additional
+        capabilities are probed and version-gated, then have their own
+        static registers read individually (batching across all
+        capabilities isn't useful here because static reads only
+        happen once at setup).
         """
         await self.connect()
 
-        static: dict[str, Any] = {}
-        # Core is pre-loaded in __init__; read its static data first so we
-        # know the layout version before gating the rest.
         core_cap = self._capabilities[0]
-        static.update(await core_cap.async_read_static(self._client, self._device_id))
+        core_regs = await self.async_read_registers(list(core_cap.static_definitions))
+        static: dict[str, Any] = dict(core_cap.decode_static(core_regs))
 
         layout_str = static.get(DATA_REG_LAYOUT_VER)
 
-        # Probe + load the remaining capabilities (PR B will populate these).
         for cls in CAPABILITIES[1:]:
             cap = cls()
             if not self._version_gate_passes(cap, layout_str):
@@ -175,9 +176,11 @@ class HeidelbergEnergyControlAPI:
             try:
                 if not await cap.async_probe(self._client, self._device_id):
                     continue
-                static.update(
-                    await cap.async_read_static(self._client, self._device_id)
-                )
+                if cap.static_definitions:
+                    cap_regs = await self.async_read_registers(
+                        list(cap.static_definitions)
+                    )
+                    static.update(cap.decode_static(cap_regs))
             except HeidelbergEnergyControlAPIError as err:
                 _LOGGER.warning(
                     "Capability %r failed to load, skipping: %s", cap.key, err
@@ -211,15 +214,25 @@ class HeidelbergEnergyControlAPI:
         )
 
     async def async_get_data(self) -> dict[str, Any]:
-        """Read polled data from every loaded capability and merge."""
+        """Batch-read every loaded capability's polled registers and merge decodes.
+
+        Definitions are collected across all capabilities and handed to
+        `async_read_registers`, which coalesces consecutive same-type
+        blocks into single Modbus transactions. Each capability then
+        decodes its own slice from the resulting {address: value} dict.
+        """
         all_start = time.perf_counter()
         await self.connect()
 
+        all_defs: list[RegisterDefinition] = []
+        for cap in self._capabilities:
+            all_defs.extend(cap.polled_definitions)
+
+        registers = await self.async_read_registers(all_defs)
+
         merged: dict[str, Any] = {}
         for cap in self._capabilities:
-            merged.update(
-                await cap.async_read_polled(self._client, self._device_id)
-            )
+            merged.update(cap.decode_polled(registers))
 
         _LOGGER.debug(
             "Fetch complete: Total: %.3fs",
