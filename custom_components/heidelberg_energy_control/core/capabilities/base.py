@@ -26,11 +26,6 @@ class Capability:
     key: str = ""
     min_layout_version: str | None = None
 
-    # RESERVED: not read yet. A future PR will use this to route slow-
-    # changing register groups (watchdog, failsafe) to a longer poll
-    # cycle so bus load stays low. Default 1 means "poll every cycle."
-    poll_interval_multiplier: int = 1
-
     static_definitions: tuple[RegisterDefinition, ...] = ()
     polled_definitions: tuple[RegisterDefinition, ...] = ()
 

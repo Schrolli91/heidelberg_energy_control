@@ -143,8 +143,3 @@ def test_core_declares_expected_definitions():
         RegisterDefinition(REG_COMMAND_REMOTE_LOCK, 1, RegisterType.HOLDING),
         RegisterDefinition(REG_COMMAND_TARGET_CURRENT, 1, RegisterType.HOLDING),
     )
-
-
-def test_capability_default_poll_interval_multiplier_is_one():
-    """Reserved attribute for future slow-poll routing; default 1 = every cycle."""
-    assert CoreCapability.poll_interval_multiplier == 1
