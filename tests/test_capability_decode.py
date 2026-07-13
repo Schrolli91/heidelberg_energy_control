@@ -26,6 +26,8 @@ from custom_components.heidelberg_energy_control.const import (
     DATA_REG_LAYOUT_VER,
     DATA_SW_VERSION,
     DATA_TOTAL_ENERGY,
+)
+from custom_components.heidelberg_energy_control.core.capabilities.core import (
     REG_COMMAND_REMOTE_LOCK,
     REG_COMMAND_TARGET_CURRENT,
     REG_DATA_START,
@@ -33,8 +35,6 @@ from custom_components.heidelberg_energy_control.const import (
     REG_HW_VERS,
     REG_LAYOUT,
     REG_SW_VERS,
-)
-from custom_components.heidelberg_energy_control.core.capabilities.core import (
     CoreCapability,
 )
 from custom_components.heidelberg_energy_control.core.registers import (

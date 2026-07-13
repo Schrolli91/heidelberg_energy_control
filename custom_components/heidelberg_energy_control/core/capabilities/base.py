@@ -51,12 +51,12 @@ class Capability:
         """Build this capability's contribution to the polled-data dict."""
         return {}
 
-    def supports_write(self, address: int) -> bool:
-        """Return True if this capability owns writes to the given register."""
+    def supports_write(self, key: str) -> bool:
+        """Return True if this capability owns writes for the given command key."""
         return False
 
     async def async_write(
-        self, client: Any, device_id: int, address: int, value: int
+        self, client: Any, device_id: int, key: str, value: int
     ) -> bool:
-        """Perform a write owned by this capability."""
+        """Perform a write owned by this capability, addressed by command key."""
         raise NotImplementedError

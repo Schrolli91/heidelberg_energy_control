@@ -86,10 +86,10 @@ def mock_api() -> MagicMock:
     """Minimal API mock for coordinator-level tests.
 
     Tests configure async_get_data's return value or side_effect per case.
-    async_write_register is an AsyncMock that records calls for assertion.
+    async_write_command is an AsyncMock that records calls for assertion.
     """
     api = MagicMock()
     api.async_get_data = AsyncMock(return_value={})
-    api.async_write_register = AsyncMock(return_value=True)
+    api.async_write_command = AsyncMock(return_value=True)
     api.disconnect = AsyncMock()
     return api

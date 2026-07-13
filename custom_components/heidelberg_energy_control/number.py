@@ -27,8 +27,7 @@ class HeidelbergNumberEntityDescription(NumberEntityDescription):
 
     capability: type[Capability]
 
-    # Make these optional so virtual numbers don't need them
-    register: int | None = None
+    # Optional: virtual numbers don't need it
     multiplier: float | None = None
 
 

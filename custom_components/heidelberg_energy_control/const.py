@@ -49,24 +49,10 @@ DATA_IS_PLUGGED = "is_plugged"
 DATA_IS_CHARGING = "is_charging"
 # Hardware Command
 COMMAND_REMOTE_LOCK = "remote_lock_command"
-REG_COMMAND_REMOTE_LOCK = 259
 COMMAND_TARGET_CURRENT = "max_current_command"
-REG_COMMAND_TARGET_CURRENT = 261
 # Virtual
 VIRTUAL_ENABLE = "virtual_enable"
 VIRTUAL_TARGET_CURRENT = "virtual_current"
-
-# ##### Modbus registers #####
-# Modbus Register-Layouts Version (length 1)
-REG_LAYOUT = 4
-# Modbus Register for wallbox sensors
-REG_DATA_START = 5
-REG_DATA_COUNT = 14
-# Modbus Register for hw current settings (length 2)
-REG_HW_CURR_START = 100
-# Modbus Register for hw/sw version (length 1 each)
-REG_HW_VERS = 200
-REG_SW_VERS = 203
 
 # ##### Map for charging state #####
 # Values from the heidelberg modbus docs

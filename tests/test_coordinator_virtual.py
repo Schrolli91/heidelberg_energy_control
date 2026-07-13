@@ -18,7 +18,6 @@ from custom_components.heidelberg_energy_control.const import (
     COMMAND_TARGET_CURRENT,
     DATA_HW_MAX_CURR,
     DATA_REG_LAYOUT_VER,
-    REG_COMMAND_TARGET_CURRENT,
     VIRTUAL_ENABLE,
     VIRTUAL_TARGET_CURRENT,
 )
@@ -114,8 +113,8 @@ async def test_switch_off_writes_zero_to_hardware(hass, mock_api):
 
     await coord.async_handle_switch_state_change(VIRTUAL_ENABLE, False)
 
-    mock_api.async_write_register.assert_awaited_once_with(
-        REG_COMMAND_TARGET_CURRENT, 0
+    mock_api.async_write_command.assert_awaited_once_with(
+        COMMAND_TARGET_CURRENT, 0
     )
     assert coord.logic_enabled is False
     assert coord.target_current == 12.0  # preserved for restore
@@ -129,8 +128,8 @@ async def test_switch_on_restores_last_target(hass, mock_api):
 
     await coord.async_handle_switch_state_change(VIRTUAL_ENABLE, True)
 
-    mock_api.async_write_register.assert_awaited_once_with(
-        REG_COMMAND_TARGET_CURRENT, 125
+    mock_api.async_write_command.assert_awaited_once_with(
+        COMMAND_TARGET_CURRENT, 125
     )
     assert coord.logic_enabled is True
 
@@ -142,8 +141,8 @@ async def test_slider_while_enabled_writes_to_hardware(hass, mock_api):
 
     await coord.async_handle_number_set(VIRTUAL_TARGET_CURRENT, 10.0)
 
-    mock_api.async_write_register.assert_awaited_once_with(
-        REG_COMMAND_TARGET_CURRENT, 100
+    mock_api.async_write_command.assert_awaited_once_with(
+        COMMAND_TARGET_CURRENT, 100
     )
     assert coord.target_current == 10.0
 
@@ -155,7 +154,7 @@ async def test_slider_while_disabled_stores_but_does_not_write(hass, mock_api):
 
     await coord.async_handle_number_set(VIRTUAL_TARGET_CURRENT, 10.0)
 
-    mock_api.async_write_register.assert_not_awaited()
+    mock_api.async_write_command.assert_not_awaited()
     assert coord.target_current == 10.0
     assert coord.data[VIRTUAL_TARGET_CURRENT] == 10.0
 
@@ -183,7 +182,7 @@ async def test_old_firmware_refuses_switch_writes(hass, mock_api):
     await coord.async_handle_switch_state_change(VIRTUAL_ENABLE, True)
     await coord.async_handle_number_set(VIRTUAL_TARGET_CURRENT, 12.0)
 
-    mock_api.async_write_register.assert_not_awaited()
+    mock_api.async_write_command.assert_not_awaited()
 
 
 # ---------- empty-response tolerance ----------

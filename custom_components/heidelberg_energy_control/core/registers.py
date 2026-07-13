@@ -27,9 +27,14 @@ class RegisterDefinition:
     A definition of `RegisterDefinition(address=15, count=2, type=INPUT)`
     means "read input registers 15 and 16." The API returns a dict
     keyed by absolute address, so a capability decoding a 32-bit value
-    would do `(regs[15] << 16) | regs[16]`.
+    would do `pack_32bit(regs[15], regs[16])`.
     """
 
     address: int
     count: int
     type: RegisterType
+
+
+def pack_32bit(high: int, low: int) -> int:
+    """Compose a 32-bit value from two 16-bit words, high word first."""
+    return (high << 16) | low

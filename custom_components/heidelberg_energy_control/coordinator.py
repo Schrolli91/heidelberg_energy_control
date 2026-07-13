@@ -20,7 +20,6 @@ from .const import (
     DATA_REG_LAYOUT_VER,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
-    REG_COMMAND_TARGET_CURRENT,
     VIRTUAL_ENABLE,
     VIRTUAL_TARGET_CURRENT,
 )
@@ -158,8 +157,8 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
 
         modbus_value = int(value * 10.0)
         try:
-            await self.api.async_write_register(
-                REG_COMMAND_TARGET_CURRENT, modbus_value
+            await self.api.async_write_command(
+                COMMAND_TARGET_CURRENT, modbus_value
             )
 
             # Update local state for immediate UI feedback

@@ -45,25 +45,31 @@ from ...const import (
     DATA_VOLTAGE_L1,
     DATA_VOLTAGE_L2,
     DATA_VOLTAGE_L3,
-    REG_COMMAND_REMOTE_LOCK,
-    REG_COMMAND_TARGET_CURRENT,
-    REG_DATA_COUNT,
-    REG_DATA_START,
-    REG_HW_CURR_START,
-    REG_HW_VERS,
-    REG_LAYOUT,
-    REG_SW_VERS,
 )
 from ..exceptions import (
     HeidelbergEnergyControlAPIError,
     HeidelbergEnergyControlWriteError,
 )
-from ..registers import RegisterDefinition, RegisterType
+from ..registers import RegisterDefinition, RegisterType, pack_32bit
 from .base import Capability
 
 _LOGGER = logging.getLogger(__name__)
 
-_WRITE_ADDRESSES = frozenset({REG_COMMAND_REMOTE_LOCK, REG_COMMAND_TARGET_CURRENT})
+# Modbus register addresses owned by this capability.
+REG_LAYOUT = 4
+REG_DATA_START = 5
+REG_DATA_COUNT = 14
+REG_HW_CURR_START = 100
+REG_HW_VERS = 200
+REG_SW_VERS = 203
+REG_COMMAND_REMOTE_LOCK = 259
+REG_COMMAND_TARGET_CURRENT = 261
+
+# Symbolic command keys owned by this capability, mapped to their write registers.
+_COMMAND_REGISTERS: dict[str, int] = {
+    COMMAND_REMOTE_LOCK: REG_COMMAND_REMOTE_LOCK,
+    COMMAND_TARGET_CURRENT: REG_COMMAND_TARGET_CURRENT,
+}
 
 
 def register_to_version(decimal_value: int) -> str:
@@ -88,11 +94,6 @@ def to_32bit(regs: list[int], idx_high: int) -> int:
             f"Index {idx_high} out of bounds for 32-bit conversion"
         )
     return (regs[idx_high] << 16) | regs[idx_high + 1]
-
-
-def pack_32bit(high: int, low: int) -> int:
-    """Compose a 32-bit value from two 16-bit words, high word first."""
-    return (high << 16) | low
 
 
 class CoreCapability(Capability):
@@ -165,23 +166,24 @@ class CoreCapability(Capability):
             COMMAND_TARGET_CURRENT: registers[REG_COMMAND_TARGET_CURRENT] / 10.0,
         }
 
-    def supports_write(self, address: int) -> bool:
-        return address in _WRITE_ADDRESSES
+    def supports_write(self, key: str) -> bool:
+        return key in _COMMAND_REGISTERS
 
     async def async_write(
-        self, client: Any, device_id: int, address: int, value: int
+        self, client: Any, device_id: int, key: str, value: int
     ) -> bool:
+        address = _COMMAND_REGISTERS[key]
         try:
             result = await client.write_register(
                 address=address, value=int(value), device_id=device_id
             )
             if result.isError():
                 raise HeidelbergEnergyControlWriteError(
-                    f"Failed to write register {address}"
+                    f"Failed to write command {key} (register {address})"
                 )
             return True
         except (ModbusException, OSError) as err:
-            _LOGGER.error("Error on writing Register %s: %s", address, err)
+            _LOGGER.error("Error on writing command %s (reg %s): %s", key, address, err)
             raise HeidelbergEnergyControlWriteError(
-                f"Failed to write register {address}: {err}"
+                f"Failed to write command {key} (register {address}): {err}"
             ) from err

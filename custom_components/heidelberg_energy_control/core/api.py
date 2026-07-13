@@ -191,17 +191,19 @@ class HeidelbergEnergyControlAPI:
         self._loaded = True
         return static
 
-    async def async_write_register(self, address: int, value: int) -> bool:
-        """Write a value to a specific register (FC06).
+    async def async_write_command(self, key: str, value: int) -> bool:
+        """Write a value for a symbolic command key (FC06).
 
-        Dispatches to whichever loaded capability claims the address.
+        Dispatches to whichever loaded capability claims the key. The
+        capability translates the key to its owning register internally;
+        callers never see raw addresses.
         """
         write_start = time.perf_counter()
         await self.connect()
         for cap in self._capabilities:
-            if cap.supports_write(address):
+            if cap.supports_write(key):
                 result = await cap.async_write(
-                    self._client, self._device_id, address, value
+                    self._client, self._device_id, key, value
                 )
                 _LOGGER.debug(
                     "Write complete: WRITE: %.3fs",
@@ -210,7 +212,7 @@ class HeidelbergEnergyControlAPI:
                 return result
 
         raise HeidelbergEnergyControlWriteError(
-            f"No capability owns writes to register {address}"
+            f"No capability owns writes for command {key!r}"
         )
 
     async def async_get_data(self) -> dict[str, Any]:
