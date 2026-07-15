@@ -22,26 +22,19 @@ class HeidelbergNumber(HeidelbergEntityBase, NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         """Write value to hardware and update coordinator data."""
 
-        # Guard clause: Ensure register and multiplier are present
-        if (
-            self.entity_description.register is None
-            or self.entity_description.multiplier is None
-        ):
+        if self.entity_description.multiplier is None:
             _LOGGER.error(
-                "Cannot write %s: Missing register or multiplier in description",
+                "Cannot write %s: Missing multiplier in description",
                 self.entity_description.key,
             )
             return
 
-        # Calculate the raw value for Modbus
         modbus_value = int(value * self.entity_description.multiplier)
 
-        # Write to the physical register via API
-        success = await self.coordinator.api.async_write_register(
-            self.entity_description.register, modbus_value
+        success = await self.coordinator.api.async_write_command(
+            self.entity_description.key, modbus_value
         )
 
         if success:
-            # Optimistic update of the coordinator data
             self.coordinator.data[self.entity_description.key] = value
             self.coordinator.async_set_updated_data(self.coordinator.data)

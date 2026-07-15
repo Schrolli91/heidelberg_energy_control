@@ -18,16 +18,16 @@ from . import HeidelbergEnergyControlConfigEntry
 from .classes.heidelberg_number import HeidelbergNumber
 from .classes.heidelberg_number_virtual import HeidelbergNumberVirtual
 from .const import DATA_HW_MAX_CURR, VIRTUAL_TARGET_CURRENT
+from .core.capabilities import Capability, CoreCapability
 
 
 @dataclass(frozen=True, kw_only=True)
 class HeidelbergNumberEntityDescription(NumberEntityDescription):
     """Class describing Heidelberg number entities."""
 
-    min_version: str | None = None
+    capability: type[Capability]
 
-    # Make these optional so virtual numbers don't need them
-    register: int | None = None
+    # Optional: virtual numbers don't need it
     multiplier: float | None = None
 
 
@@ -41,7 +41,7 @@ NUMBER_TYPES: tuple[HeidelbergNumberEntityDescription, ...] = (
         device_class=NumberDeviceClass.CURRENT,
         native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
         mode=NumberMode.BOX,
-        min_version="1.0.7" # depends on COMMAND_TARGET_CURRENT
+        capability=CoreCapability,
     ),
 )
 
@@ -54,16 +54,20 @@ async def async_setup_entry(
     """Set up the number platform."""
     coordinator = entry.runtime_data
     entities: list[NumberEntity] = []
+    loaded_types = {type(c) for c in coordinator.api.capabilities}
 
     for description in NUMBER_TYPES:
-        if coordinator.is_supported(description.min_version, description.key):
-            if description.key == VIRTUAL_TARGET_CURRENT:
-                hw_max_current = float(coordinator.static_data.get(DATA_HW_MAX_CURR, 16))
-                description = replace(description, native_max_value=hw_max_current)
-                entities.append(
-                    HeidelbergNumberVirtual(coordinator, entry, description)
-                )
-            else:
-                entities.append(HeidelbergNumber(coordinator, entry, description))
+        if description.capability not in loaded_types:
+            continue
+        if description.key == VIRTUAL_TARGET_CURRENT:
+            if not coordinator.supports_virtual_logic:
+                continue
+            hw_max_current = float(coordinator.static_data.get(DATA_HW_MAX_CURR, 16))
+            description = replace(description, native_max_value=hw_max_current)
+            entities.append(
+                HeidelbergNumberVirtual(coordinator, entry, description)
+            )
+        else:
+            entities.append(HeidelbergNumber(coordinator, entry, description))
 
     async_add_entities(entities)

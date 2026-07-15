@@ -1,4 +1,14 @@
-"""API for Heidelberg Energy Control wallbox via Modbus."""
+"""API for Heidelberg Energy Control wallbox via Modbus.
+
+Owns the Modbus client and connection lifecycle, then delegates all
+register access to a set of `Capability` modules. Each capability
+contributes static and polled data and declares the writes it owns;
+the API aggregates their results into the flat dicts the coordinator
+expects.
+
+Adding a new register group means adding a capability module under
+`capabilities/`, not editing this file.
+"""
 
 from __future__ import annotations
 
@@ -6,49 +16,20 @@ import logging
 import time
 from typing import Any
 
+from packaging import version
 from pymodbus.client import AsyncModbusTcpClient
 from pymodbus.exceptions import ModbusException
 
-from ..const import (
-    CHARGING_STATE_MAP,
-    COMMAND_REMOTE_LOCK,
-    COMMAND_TARGET_CURRENT,
-    DATA_CHARGING_POWER,
-    DATA_CHARGING_STATE,
-    DATA_CURRENT,
-    DATA_CURRENT_L1,
-    DATA_CURRENT_L2,
-    DATA_CURRENT_L3,
-    DATA_ENERGY_SINCE_POWER_ON,
-    DATA_EXTERNAL_LOCK_STATE,
-    DATA_HW_MIN_CURR,
-    DATA_HW_MAX_CURR,
-    DATA_HW_VERSION,
-    DATA_IS_CHARGING,
-    DATA_IS_PLUGGED,
-    DATA_PCB_TEMPERATURE,
-    DATA_PHASES_ACTIVE,
-    DATA_REG_LAYOUT_VER,
-    DATA_SW_VERSION,
-    DATA_TOTAL_ENERGY,
-    DATA_VOLTAGE_L1,
-    DATA_VOLTAGE_L2,
-    DATA_VOLTAGE_L3,
-    REG_DATA_COUNT,
-    REG_DATA_START,
-    REG_HW_CURR_START,
-    REG_HW_VERS,
-    REG_SW_VERS,
-    REG_LAYOUT,
-    REG_COMMAND_REMOTE_LOCK,
-    REG_COMMAND_TARGET_CURRENT,
-)
+from ..const import DATA_REG_LAYOUT_VER
+from .capabilities import CAPABILITIES, Capability
+from .capabilities.core import register_to_version, to_32bit
 from .exceptions import (
     HeidelbergEnergyControlAPIError,
     HeidelbergEnergyControlConnectionError,
     HeidelbergEnergyControlReadError,
     HeidelbergEnergyControlWriteError,
 )
+from .registers import RegisterDefinition, RegisterType
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -66,6 +47,11 @@ class HeidelbergEnergyControlAPI:
             port=port,
             timeout=5,
         )
+        # Core capability is always present (no version floor). Additional
+        # capabilities are gated by min_layout_version + runtime probe and
+        # added during async_get_static_data().
+        self._capabilities: list[Capability] = [CAPABILITIES[0]()]
+        self._loaded: bool = False
 
     async def connect(self) -> None:
         """Connect to the wallbox (no-op if already connected)."""
@@ -88,196 +74,195 @@ class HeidelbergEnergyControlAPI:
         if self._client.connected:
             self._client.close()
 
-    async def async_get_static_data(self) -> dict[str, str] | None:
-        """Read the static data and return if successful."""
+    @property
+    def capabilities(self) -> list[Capability]:
+        """Loaded capabilities, in registration order."""
+        return list(self._capabilities)
+
+    async def async_read_registers(
+        self, definitions: list[RegisterDefinition]
+    ) -> dict[int, int]:
+        """Read every register described by `definitions` in as few Modbus calls as possible.
+
+        Sorts definitions by (type, address) and coalesces consecutive
+        same-type reads into single block transactions. Returns a dict
+        keyed by absolute register address, so a capability that
+        declared `RegisterDefinition(15, 2, INPUT)` decodes as
+        `regs[15]` and `regs[16]`.
+
+        Duplicate definitions are tolerated (the merge simply reads
+        the address once). Non-consecutive addresses become separate
+        block reads.
+        """
         await self.connect()
-        try:
-            # Read layout version
-            layout_result = await self._client.read_input_registers(
-                address=REG_LAYOUT, count=1, device_id=self._device_id
-            )
-            if layout_result.isError():
-                raise HeidelbergEnergyControlReadError("Failed to read LAYOUT register")
 
-            # Read hardware version
-            hw_vers_result = await self._client.read_input_registers(
-                address=REG_HW_VERS, count=1, device_id=self._device_id
-            )
-            if hw_vers_result.isError():
+        result: dict[int, int] = {}
+        if not definitions:
+            return result
+
+        # Deduplicate first so overlapping definitions don't split a block.
+        unique = list({(d.type, d.address, d.count): d for d in definitions}.values())
+        sorted_defs = sorted(unique, key=lambda d: (d.type.value, d.address))
+
+        i = 0
+        while i < len(sorted_defs):
+            current = sorted_defs[i]
+            start_addr = current.address
+            end_addr = current.address + current.count
+            merge_count = 1
+
+            while i + merge_count < len(sorted_defs):
+                nxt = sorted_defs[i + merge_count]
+                if nxt.type == current.type and nxt.address == end_addr:
+                    end_addr += nxt.count
+                    merge_count += 1
+                else:
+                    break
+
+            total_count = end_addr - start_addr
+            try:
+                if current.type == RegisterType.INPUT:
+                    read_result = await self._client.read_input_registers(
+                        address=start_addr,
+                        count=total_count,
+                        device_id=self._device_id,
+                    )
+                else:
+                    read_result = await self._client.read_holding_registers(
+                        address=start_addr,
+                        count=total_count,
+                        device_id=self._device_id,
+                    )
+            except (ModbusException, OSError) as err:
                 raise HeidelbergEnergyControlReadError(
-                    "Failed to read HW_VERSION register"
+                    f"Failed to read {total_count} {current.type.value} register(s) at {start_addr}: {err}"
+                ) from err
+
+            if read_result.isError():
+                raise HeidelbergEnergyControlReadError(
+                    f"Failed to read {total_count} {current.type.value} register(s) at {start_addr}"
                 )
 
-            # Read software version
-            sw_vers_result = await self._client.read_input_registers(
-                address=REG_SW_VERS, count=1, device_id=self._device_id
-            )
-            if sw_vers_result.isError():
-                raise HeidelbergEnergyControlReadError(
-                    "Failed to read SW_VERSION register"
+            for offset in range(total_count):
+                result[start_addr + offset] = read_result.registers[offset]
+
+            i += merge_count
+
+        return result
+
+    async def async_get_static_data(self) -> dict[str, Any] | None:
+        """Read static data via the core capability, then load the rest.
+
+        Layout version is needed to gate the remaining capabilities by
+        `min_layout_version`, so the core capability is read first and
+        unconditionally — its `min_layout_version` is None. Additional
+        capabilities are probed and version-gated, then have their own
+        static registers read individually (batching across all
+        capabilities isn't useful here because static reads only
+        happen once at setup).
+        """
+        await self.connect()
+
+        core_cap = self._capabilities[0]
+        core_regs = await self.async_read_registers(list(core_cap.static_definitions))
+        static: dict[str, Any] = dict(core_cap.decode_static(core_regs))
+
+        layout_str = static.get(DATA_REG_LAYOUT_VER)
+
+        for cls in CAPABILITIES[1:]:
+            cap = cls()
+            if not self._version_gate_passes(cap, layout_str):
+                continue
+            try:
+                if not await cap.async_probe(self._client, self._device_id):
+                    continue
+                if cap.static_definitions:
+                    cap_regs = await self.async_read_registers(
+                        list(cap.static_definitions)
+                    )
+                    static.update(cap.decode_static(cap_regs))
+            except HeidelbergEnergyControlAPIError as err:
+                _LOGGER.warning(
+                    "Capability %r failed to load, skipping: %s", cap.key, err
                 )
+                continue
+            self._capabilities.append(cap)
 
-            # Read hardware current limits
-            hw_curr_result = await self._client.read_input_registers(
-                address=REG_HW_CURR_START, count=2, device_id=self._device_id
-            )
-            if hw_curr_result.isError():
-                raise HeidelbergEnergyControlReadError(
-                    "Failed to read HW_CURRENT register"
-                )
+        self._loaded = True
+        return static
 
-            return {
-                DATA_REG_LAYOUT_VER: self._register_to_version(
-                    layout_result.registers[0]
-                ),
-                DATA_HW_VERSION: self._register_to_version(hw_vers_result.registers[0]),
-                DATA_SW_VERSION: self._register_to_version(sw_vers_result.registers[0]),
-                DATA_HW_MAX_CURR: hw_curr_result.registers[0],
-                DATA_HW_MIN_CURR: hw_curr_result.registers[1],
-            }
-        except (ModbusException, OSError, IndexError) as err:
-            _LOGGER.error("Error fetching static wallbox data: %s", err)
-            raise HeidelbergEnergyControlReadError(
-                f"Failed to fetch static wallbox data: {err}"
-            ) from err
+    async def async_write_command(self, key: str, value: int) -> bool:
+        """Write a value for a symbolic command key (FC06).
 
-    async def async_write_register(self, address: int, value: int) -> bool:
-        """Write a value to a specific register (FC06)."""
+        Dispatches to whichever loaded capability claims the key. The
+        capability translates the key to its owning register internally;
+        callers never see raw addresses.
+        """
         write_start = time.perf_counter()
         await self.connect()
-        try:
-            result = await self._client.write_register(
-                address=address, value=int(value), device_id=self._device_id
-            )
-            if result.isError():
-                raise HeidelbergEnergyControlWriteError(
-                    f"Failed to write register {address}"
+        for cap in self._capabilities:
+            if cap.supports_write(key):
+                result = await cap.async_write(
+                    self._client, self._device_id, key, value
                 )
+                _LOGGER.debug(
+                    "Write complete: WRITE: %.3fs",
+                    time.perf_counter() - write_start,
+                )
+                return result
 
-            _LOGGER.debug(
-                "Write complete: WRITE: %.3fs",
-                time.perf_counter() - write_start,
-            )
-            return True
-        except (ModbusException, OSError) as err:
-            _LOGGER.error("Error on writing Register %s: %s", address, err)
-            raise HeidelbergEnergyControlWriteError(
-                f"Failed to write register {address}: {err}"
-            ) from err
+        raise HeidelbergEnergyControlWriteError(
+            f"No capability owns writes for command {key!r}"
+        )
 
     async def async_get_data(self) -> dict[str, Any]:
-        """Read all relevant registers in one call and map to constants."""
+        """Batch-read every loaded capability's polled registers and merge decodes.
+
+        Definitions are collected across all capabilities and handed to
+        `async_read_registers`, which coalesces consecutive same-type
+        blocks into single Modbus transactions. Each capability then
+        decodes its own slice from the resulting {address: value} dict.
+        """
         all_start = time.perf_counter()
         await self.connect()
 
-        try:
-            # Read input registers (data)
-            data_start = time.perf_counter()
-            data = await self._client.read_input_registers(
-                address=REG_DATA_START, count=REG_DATA_COUNT, device_id=self._device_id
-            )
-            if data.isError():
-                raise HeidelbergEnergyControlReadError("Failed to read data registers")
+        all_defs: list[RegisterDefinition] = []
+        for cap in self._capabilities:
+            all_defs.extend(cap.polled_definitions)
 
-            data_duration = time.perf_counter() - data_start
+        registers = await self.async_read_registers(all_defs)
 
-            # Read holding registers (commands/settings)
-            cmd_start = time.perf_counter()
-            remote_lock = await self._client.read_holding_registers(
-                address=REG_COMMAND_REMOTE_LOCK,
-                count=1,
-                device_id=self._device_id,
-            )
-            if remote_lock.isError():
-                raise HeidelbergEnergyControlReadError(
-                    "Failed to read remote lock register"
-                )
-            target_current = await self._client.read_holding_registers(
-                address=REG_COMMAND_TARGET_CURRENT,
-                count=1,
-                device_id=self._device_id,
-            )
-            if target_current.isError():
-                raise HeidelbergEnergyControlReadError(
-                    "Failed to read remote lock register"
-                )
+        merged: dict[str, Any] = {}
+        for cap in self._capabilities:
+            merged.update(cap.decode_polled(registers))
 
-            cmd_duration = time.perf_counter() - cmd_start
+        _LOGGER.debug(
+            "Fetch complete: Total: %.3fs",
+            time.perf_counter() - all_start,
+        )
+        return merged
 
-            data_regs = data.registers
-            remote_lock_regs = remote_lock.registers
-            target_current_regs = target_current.registers
-
-            if not data_regs or len(data_regs) < REG_DATA_COUNT:
-                _LOGGER.error(
-                    "Data register incomplete: expected %d registers, got %d",
-                    REG_DATA_COUNT,
-                    len(data_regs) if data_regs else 0,
-                )
-                raise HeidelbergEnergyControlReadError("Data register incomplete")
-
-
-            _LOGGER.debug(
-                "Fetch complete: DATA: %.3fs | CMD: %.3fs | Total: %.3fs",
-                data_duration,
-                cmd_duration,
-                time.perf_counter() - all_start,
-            )
-
-            curr_l1 = data_regs[1] / 10.0
-            curr_l2 = data_regs[2] / 10.0
-            curr_l3 = data_regs[3] / 10.0
-
-            active_phases = sum(1 for i in [curr_l1, curr_l2, curr_l3] if i > 0.1)
-            charge_current = round(
-                (curr_l1 + curr_l2 + curr_l3) / max(1, active_phases), 2
-            )
-
-            return {
-                # DATA
-                DATA_CHARGING_STATE: CHARGING_STATE_MAP.get(
-                    data_regs[0], f"Unknown ({data_regs[0]})"
-                ),
-                DATA_PHASES_ACTIVE: active_phases,
-                DATA_CURRENT: charge_current,
-                DATA_CURRENT_L1: curr_l1,
-                DATA_CURRENT_L2: curr_l2,
-                DATA_CURRENT_L3: curr_l3,
-                DATA_PCB_TEMPERATURE: data_regs[4] / 10.0,
-                DATA_VOLTAGE_L1: data_regs[5],
-                DATA_VOLTAGE_L2: data_regs[6],
-                DATA_VOLTAGE_L3: data_regs[7],
-                DATA_CHARGING_POWER: data_regs[9],
-                DATA_ENERGY_SINCE_POWER_ON: self._to_32bit(data_regs, 10) / 1000.0,
-                DATA_TOTAL_ENERGY: self._to_32bit(data_regs, 12) / 1000.0,
-                # Binary Sensors
-                DATA_EXTERNAL_LOCK_STATE: data_regs[8]
-                == 0,  # 0 = Locked / 1 = Unlocked
-                DATA_IS_PLUGGED: data_regs[0] >= 4,
-                DATA_IS_CHARGING: data_regs[9] > 0,
-                # COMMAND
-                COMMAND_REMOTE_LOCK: remote_lock_regs[0] == 0,  # 0 = Locked / 1 = Unlocked
-                COMMAND_TARGET_CURRENT: target_current_regs[0] / 10.0,
-            }
-
-        except (ModbusException, OSError, IndexError) as err:
-            _LOGGER.error("Error fetching wallbox data: %s", err)
-            raise HeidelbergEnergyControlReadError(
-                f"Failed to fetch wallbox data: {err}"
-            ) from err
-
-    def _to_32bit(self, regs: list[int], idx_high: int) -> int:
-        """Helper to combine two 16-bit registers to 32-bit."""
-        if idx_high + 1 >= len(regs):
-            raise HeidelbergEnergyControlAPIError(
-                f"Index {idx_high} out of bounds for 32-bit conversion"
-            )
-        return (regs[idx_high] << 16) | regs[idx_high + 1]
+    # --- helpers retained for backwards compatibility with existing tests ---
 
     def _register_to_version(self, decimal_value: int) -> str:
-        """Convert register decimal value to semver string."""
-        h = hex(decimal_value)[2:].zfill(3)
-        patch = int(h[-1], 16)
-        minor = int(h[-2], 16)
-        major = int(h[:-2], 16)
-        return f"{major}.{minor}.{patch}"
+        return register_to_version(decimal_value)
+
+    def _to_32bit(self, regs: list[int], idx_high: int) -> int:
+        return to_32bit(regs, idx_high)
+
+    # --- internal ---
+
+    @staticmethod
+    def _version_gate_passes(cap: Capability, layout_str: str | None) -> bool:
+        """Apply the capability's min_layout_version gate. Fail-open on parse errors."""
+        if cap.min_layout_version is None or layout_str is None:
+            return True
+        try:
+            return version.parse(layout_str) >= version.parse(cap.min_layout_version)
+        except Exception:
+            _LOGGER.warning(
+                "Could not parse layout version %r; assuming capability %r supported",
+                layout_str,
+                cap.key,
+            )
+            return True

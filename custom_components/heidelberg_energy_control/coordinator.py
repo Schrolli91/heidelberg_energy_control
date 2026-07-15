@@ -20,7 +20,6 @@ from .const import (
     DATA_REG_LAYOUT_VER,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
-    REG_COMMAND_TARGET_CURRENT,
     VIRTUAL_ENABLE,
     VIRTUAL_TARGET_CURRENT,
 )
@@ -56,9 +55,11 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
         self.static_data = static_data
         self.entry = entry
 
-        # Check if the hardware/firmware supports the virtual logic (min V1.0.7)
-        # This prevents locking the wallbox at 0.0A if no UI switch is available
-        self.supports_virtual_logic = self.is_supported("1.0.7", "Virtual Enable Logic")
+        # The virtual enable/target-current UI depends on writing register 261
+        # to 0 as "off"; below firmware 1.0.7 there's no way to turn it back on
+        # from the UI, so we suppress the virtual layer and pass raw hardware
+        # data through instead. Fail-open if the layout version can't be parsed.
+        self.supports_virtual_logic = self._parse_supports_virtual_logic(static_data)
 
         # Get hardware limits from static data
         hw_max_current = float(static_data.get(DATA_HW_MAX_CURR, 16))
@@ -156,8 +157,8 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
 
         modbus_value = int(value * 10.0)
         try:
-            await self.api.async_write_register(
-                REG_COMMAND_TARGET_CURRENT, modbus_value
+            await self.api.async_write_command(
+                COMMAND_TARGET_CURRENT, modbus_value
             )
 
             # Update local state for immediate UI feedback
@@ -221,42 +222,25 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
         else:
             _LOGGER.warning("Unknown key '%s' in number set handler", key)
 
-    def is_supported(self, min_required: str | None, feature_name: str) -> bool:
-        """Check if the firmware version supports a specific feature."""
+    @staticmethod
+    def _parse_supports_virtual_logic(static_data: dict[str, str]) -> bool:
+        """Return True iff the layout version supports the virtual enable layer.
 
-        # Check if min_version is missing in the description
-        if min_required is None:
+        The virtual layer depends on register 261 semantics that landed in
+        firmware 1.0.7. Fail-open on missing or unparseable versions so a
+        misreport doesn't disable a feature that would otherwise work.
+        """
+        layout_str = static_data.get(DATA_REG_LAYOUT_VER)
+        if layout_str is None:
             _LOGGER.warning(
-                "Feature '%s' has no min_version defined. Loading it by default, "
-                "but please check the documentation",
-                feature_name,
+                "Layout version not in static data; assuming virtual enable is supported"
             )
             return True
-
         try:
-            curr_str = self.static_data.get(DATA_REG_LAYOUT_VER)
-            if curr_str is None:
-                _LOGGER.warning(
-                    "Firmware version not found in static data for feature '%s'. Assuming compatibility.",
-                    feature_name,
-                )
-                return True
-
-            curr = version.parse(curr_str)
-            supported = curr >= version.parse(min_required)
-
-            if not supported:
-                _LOGGER.info(
-                    "Feature '%s' is not supported by your firmware. Required: %s, Found: %s",
-                    feature_name,
-                    min_required,
-                    curr_str,
-                )
-            return supported
-
+            return version.parse(layout_str) >= version.parse("1.0.7")
         except Exception:
-            # Fallback for parsing errors to prevent integration breakage
             _LOGGER.warning(
-                "Could not parse version for %s, assuming compatible", feature_name
+                "Could not parse layout version %r; assuming virtual enable is supported",
+                layout_str,
             )
             return True
