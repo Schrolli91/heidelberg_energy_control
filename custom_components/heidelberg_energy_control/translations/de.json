@@ -124,6 +124,9 @@
       "remote_lock_command": {
         "name": "Remote Lock"
       },
+      "standby_function_control": {
+        "name": "Standby-Modus"
+      },
       "virtual_enable": {
         "name": "Ladefreigabe"
       }

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from .base import Capability
 from .core import CoreCapability
+from .standby import StandbyCapability
 
-CAPABILITIES: tuple[type[Capability], ...] = (CoreCapability,)
+CAPABILITIES: tuple[type[Capability], ...] = (CoreCapability, StandbyCapability)
 
-__all__ = ["CAPABILITIES", "Capability", "CoreCapability"]
+__all__ = ["CAPABILITIES", "Capability", "CoreCapability", "StandbyCapability"]
