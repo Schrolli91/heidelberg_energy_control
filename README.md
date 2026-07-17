@@ -22,6 +22,11 @@ If you encounter any problems or have suggestions for improvements, please repor
 
 Fully compatible with the evcc home assitant charger.
 
+### Other Wallboxes
+The integration also supports other wallboxes which will follow the Heidelberg Modbus Layout.
+These wallboxes are:
+- tbd
+
 ## Installation via HACS
 This integration is part of the **HACS Default Store**. To install it:
 
