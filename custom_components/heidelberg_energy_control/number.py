@@ -10,15 +10,20 @@ from homeassistant.components.number import (
     NumberEntityDescription,
     NumberMode,
 )
-from homeassistant.const import UnitOfElectricCurrent
+from homeassistant.const import EntityCategory, UnitOfElectricCurrent, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import HeidelbergEnergyControlConfigEntry
 from .classes.heidelberg_number import HeidelbergNumber
 from .classes.heidelberg_number_virtual import HeidelbergNumberVirtual
-from .const import DATA_HW_MAX_CURR, VIRTUAL_TARGET_CURRENT
-from .core.capabilities import Capability, CoreCapability
+from .const import (
+    COMMAND_FAILSAFE_CURRENT,
+    COMMAND_WATCHDOG_TIMEOUT,
+    DATA_HW_MAX_CURR,
+    VIRTUAL_TARGET_CURRENT,
+)
+from .core.capabilities import Capability, CoreCapability, WatchdogCapability
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -43,6 +48,33 @@ NUMBER_TYPES: tuple[HeidelbergNumberEntityDescription, ...] = (
         mode=NumberMode.BOX,
         capability=CoreCapability,
     ),
+    HeidelbergNumberEntityDescription(
+        key=COMMAND_WATCHDOG_TIMEOUT,
+        translation_key=COMMAND_WATCHDOG_TIMEOUT,
+        native_min_value=0,
+        native_max_value=65535,
+        native_step=1000,
+        native_unit_of_measurement=UnitOfTime.MILLISECONDS,
+        mode=NumberMode.BOX,
+        entity_category=EntityCategory.CONFIG,
+        icon="mdi:timer-alert-outline",
+        capability=WatchdogCapability,
+        multiplier=1,
+    ),
+    HeidelbergNumberEntityDescription(
+        key=COMMAND_FAILSAFE_CURRENT,
+        translation_key=COMMAND_FAILSAFE_CURRENT,
+        native_min_value=0.0,
+        native_max_value=16.0,
+        native_step=0.1,
+        device_class=NumberDeviceClass.CURRENT,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        mode=NumberMode.BOX,
+        entity_category=EntityCategory.CONFIG,
+        icon="mdi:current-ac",
+        capability=WatchdogCapability,
+        multiplier=10,
+    ),
 )
 
 
@@ -56,17 +88,21 @@ async def async_setup_entry(
     entities: list[NumberEntity] = []
     loaded_types = {type(c) for c in coordinator.api.capabilities}
 
+    hw_max_current = float(coordinator.static_data.get(DATA_HW_MAX_CURR, 16))
+
     for description in NUMBER_TYPES:
         if description.capability not in loaded_types:
             continue
         if description.key == VIRTUAL_TARGET_CURRENT:
             if not coordinator.supports_virtual_logic:
                 continue
-            hw_max_current = float(coordinator.static_data.get(DATA_HW_MAX_CURR, 16))
             description = replace(description, native_max_value=hw_max_current)
             entities.append(
                 HeidelbergNumberVirtual(coordinator, entry, description)
             )
+        elif description.key == COMMAND_FAILSAFE_CURRENT:
+            description = replace(description, native_max_value=hw_max_current)
+            entities.append(HeidelbergNumber(coordinator, entry, description))
         else:
             entities.append(HeidelbergNumber(coordinator, entry, description))
 

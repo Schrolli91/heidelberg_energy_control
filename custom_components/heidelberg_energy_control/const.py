@@ -48,8 +48,10 @@ DATA_SESSION_ENERGY = "session_energy"
 DATA_IS_PLUGGED = "is_plugged"
 DATA_IS_CHARGING = "is_charging"
 # Hardware Command
+COMMAND_FAILSAFE_CURRENT = "failsafe_current_command"
 COMMAND_REMOTE_LOCK = "remote_lock_command"
 COMMAND_TARGET_CURRENT = "max_current_command"
+COMMAND_WATCHDOG_TIMEOUT = "watchdog_timeout_command"
 # Virtual
 VIRTUAL_ENABLE = "virtual_enable"
 VIRTUAL_TARGET_CURRENT = "virtual_current"

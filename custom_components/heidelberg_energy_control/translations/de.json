@@ -116,8 +116,14 @@
       }
     },
     "number": {
+      "failsafe_current_command": {
+        "name": "FailSafe-Strom"
+      },
       "virtual_current": {
         "name": "Vorgabe Ladestrom"
+      },
+      "watchdog_timeout_command": {
+        "name": "Watchdog-Timeout"
       }
     },
     "switch": {

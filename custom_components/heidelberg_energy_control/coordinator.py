@@ -16,6 +16,7 @@ from homeassistant.exceptions import HomeAssistantError
 
 from .const import (
     COMMAND_TARGET_CURRENT,
+    COMMAND_WATCHDOG_TIMEOUT,
     DATA_HW_MAX_CURR,
     DATA_REG_LAYOUT_VER,
     DEFAULT_SCAN_INTERVAL,
@@ -70,6 +71,8 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
         self.logic_enabled: bool = False
         self._initial_fetch_done: bool = False
         self._consecutive_empty_responses: int = 0
+        self._scan_interval_seconds: int = scan_interval
+        self._watchdog_warning_logged: bool = False
 
         # Initialize data dictionary
         self.data: dict[str, Any] = {
@@ -94,6 +97,8 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
                         "Wallbox returned empty data for 3 consecutive updates"
                     )
                 return self.data
+
+            self._check_watchdog_headroom(data)
 
             # If virtual logic is not supported, just return raw data (Legacy Mode)
             if not self.supports_virtual_logic:
@@ -221,6 +226,30 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
                 self.async_update_listeners()
         else:
             _LOGGER.warning("Unknown key '%s' in number set handler", key)
+
+    def _check_watchdog_headroom(self, data: dict[str, Any]) -> None:
+        """Warn once if the poll interval is too slow to keep the watchdog fed.
+
+        The wallbox falls back to the FailSafe current if it doesn't see a
+        successful transaction within the watchdog window. A poll interval
+        near the timeout gives no room for a single missed poll; warn the
+        user once when scan_interval * 1.5 > timeout so they can retune.
+        """
+        if self._watchdog_warning_logged:
+            return
+        timeout_ms = data.get(COMMAND_WATCHDOG_TIMEOUT)
+        if not timeout_ms:  # None or 0 (watchdog disabled)
+            return
+        headroom_ms = self._scan_interval_seconds * 1500  # 1.5x margin
+        if headroom_ms > timeout_ms:
+            _LOGGER.warning(
+                "Poll interval %ss leaves no headroom for the wallbox watchdog "
+                "(timeout %sms). A single missed poll may trigger the FailSafe "
+                "current. Consider a shorter poll interval or a longer watchdog.",
+                self._scan_interval_seconds,
+                timeout_ms,
+            )
+            self._watchdog_warning_logged = True
 
     @staticmethod
     def _parse_supports_virtual_logic(static_data: dict[str, str]) -> bool:
