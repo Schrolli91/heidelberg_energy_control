@@ -13,8 +13,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from . import HeidelbergEnergyControlConfigEntry
 from .classes.heidelberg_switch import HeidelbergSwitch
 from .classes.heidelberg_switch_virtual import HeidelbergSwitchVirtual
-from .const import COMMAND_REMOTE_LOCK, VIRTUAL_ENABLE
-from .core.capabilities import Capability, CoreCapability
+from .const import COMMAND_REMOTE_LOCK, COMMAND_STANDBY, VIRTUAL_ENABLE
+from .core.capabilities import Capability, CoreCapability, StandbyCapability
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -36,6 +36,15 @@ SWITCH_TYPES: tuple[HeidelbergSwitchEntityDescription, ...] = (
         on_value=0,
         off_value=1,
         capability=CoreCapability,
+    ),
+    HeidelbergSwitchEntityDescription(
+        key=COMMAND_STANDBY,
+        translation_key=COMMAND_STANDBY,
+        icon="mdi:sleep",
+        entity_category=EntityCategory.CONFIG,
+        on_value=0,
+        off_value=4,
+        capability=StandbyCapability,
     ),
     HeidelbergSwitchEntityDescription(
         key=VIRTUAL_ENABLE,

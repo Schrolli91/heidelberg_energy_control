@@ -50,6 +50,7 @@ DATA_IS_CHARGING = "is_charging"
 # Hardware Command
 COMMAND_FAILSAFE_CURRENT = "failsafe_current_command"
 COMMAND_REMOTE_LOCK = "remote_lock_command"
+COMMAND_STANDBY = "standby_function_control"
 COMMAND_TARGET_CURRENT = "max_current_command"
 COMMAND_WATCHDOG_TIMEOUT = "watchdog_timeout_command"
 # Virtual
