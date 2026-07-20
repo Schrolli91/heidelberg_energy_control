@@ -56,15 +56,15 @@ def test_watchdog_declares_both_holding_registers():
 # ---------- decode_polled ----------
 
 
-def test_decode_polled_returns_timeout_seconds_and_failsafe_amps():
-    """Timeout divides ms by 1000 for seconds; failsafe divides by 10 for amps."""
+def test_decode_polled_returns_raw_wire_values():
+    """Both are bidirectional; capability passes raw ms and deci-amps through."""
     cap = WatchdogCapability()
     result = cap.decode_polled(
         {REG_WATCHDOG_TIMEOUT: 15000, REG_FAILSAFE_CURRENT: 80}
     )
     assert result == {
-        COMMAND_WATCHDOG_TIMEOUT: 15.0,
-        COMMAND_FAILSAFE_CURRENT: 8.0,
+        COMMAND_WATCHDOG_TIMEOUT: 15000,
+        COMMAND_FAILSAFE_CURRENT: 80,
     }
 
 
@@ -74,8 +74,8 @@ def test_decode_polled_watchdog_disabled():
     result = cap.decode_polled(
         {REG_WATCHDOG_TIMEOUT: 0, REG_FAILSAFE_CURRENT: 0}
     )
-    assert result[COMMAND_WATCHDOG_TIMEOUT] == 0.0
-    assert result[COMMAND_FAILSAFE_CURRENT] == 0.0
+    assert result[COMMAND_WATCHDOG_TIMEOUT] == 0
+    assert result[COMMAND_FAILSAFE_CURRENT] == 0
 
 
 def test_decode_polled_ignores_unrelated_addresses():
@@ -84,8 +84,8 @@ def test_decode_polled_ignores_unrelated_addresses():
         {REG_WATCHDOG_TIMEOUT: 15000, REG_FAILSAFE_CURRENT: 60, 999: 42}
     )
     assert result == {
-        COMMAND_WATCHDOG_TIMEOUT: 15.0,
-        COMMAND_FAILSAFE_CURRENT: 6.0,
+        COMMAND_WATCHDOG_TIMEOUT: 15000,
+        COMMAND_FAILSAFE_CURRENT: 60,
     }
 
 

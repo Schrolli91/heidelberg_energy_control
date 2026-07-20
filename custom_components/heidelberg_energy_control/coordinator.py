@@ -105,7 +105,9 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
                 return data
 
             # --- Virtual Logic (only for V1.0.7+) ---
-            hw_current = float(data.get(COMMAND_TARGET_CURRENT, 0.0))
+            # COMMAND_TARGET_CURRENT is deci-amps in coordinator data; convert
+            # to amps for the virtual-slider comparison and storage.
+            hw_current = float(data.get(COMMAND_TARGET_CURRENT, 0)) / 10.0
 
             # Initial sync on startup: Read wallbox current state
             if not self._initial_fetch_done:
@@ -166,8 +168,8 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
                 COMMAND_TARGET_CURRENT, modbus_value
             )
 
-            # Update local state for immediate UI feedback
-            self.data[COMMAND_TARGET_CURRENT] = value
+            # Coordinator data holds the raw wire value (deci-amps).
+            self.data[COMMAND_TARGET_CURRENT] = modbus_value
             self.async_update_listeners()
 
         except (
@@ -234,12 +236,17 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
         successful transaction within the watchdog window. A poll interval
         near the timeout gives no room for a single missed poll; warn the
         user once when scan_interval * 1.5 > timeout so they can retune.
+
+        Watchdog timeout is stored in the coordinator data as raw ms (wire
+        format); convert to seconds here for a like-for-like comparison
+        against the scan interval.
         """
         if self._watchdog_warning_logged:
             return
-        timeout_seconds = data.get(COMMAND_WATCHDOG_TIMEOUT)
-        if not timeout_seconds:  # None or 0 (watchdog disabled)
+        timeout_ms = data.get(COMMAND_WATCHDOG_TIMEOUT)
+        if not timeout_ms:  # None or 0 (watchdog disabled)
             return
+        timeout_seconds = timeout_ms / 1000.0
         headroom_seconds = self._scan_interval_seconds * 1.5
         if headroom_seconds > timeout_seconds:
             _LOGGER.warning(

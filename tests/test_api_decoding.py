@@ -80,7 +80,8 @@ VARIANT_V1_0_7 = pytest.param(
         DATA_IS_PLUGGED: True,
         DATA_IS_CHARGING: True,
         COMMAND_REMOTE_LOCK: False,
-        COMMAND_TARGET_CURRENT: 16.0,
+        # Deci-amps at the wire level; number entity divides by 10 for display.
+        COMMAND_TARGET_CURRENT: 160,
     },
     id="v1.0.7-synthetic",
 )
@@ -112,7 +113,7 @@ VARIANT_V2_0_4 = pytest.param(
         DATA_IS_PLUGGED: True,
         DATA_IS_CHARGING: True,  # power_reg > 0 → True even at 1 W (sensor noise)
         COMMAND_REMOTE_LOCK: False,
-        COMMAND_TARGET_CURRENT: 6.0,
+        COMMAND_TARGET_CURRENT: 60,
     },
     id="v2.0.4-real",
 )
@@ -181,11 +182,15 @@ async def test_polled_data_decoding_full_dict(fixture_name, expected_static, exp
 
 
 async def test_polled_data_currents_decoded_as_deciamps():
-    """Wire format stores currents in 0.1 A units; decoded values divide by 10."""
+    """L1 phase current is a sensor-only value → capability divides for display (amps).
+
+    COMMAND_TARGET_CURRENT is bidirectional (has a number entity) → capability
+    leaves it as raw deci-amps; the entity applies its multiplier symmetrically.
+    """
     api = _make_api("wallbox_v1_0_7")
     result = await api.async_get_data()
     assert result[DATA_CURRENT_L1] == 16.0
-    assert result[COMMAND_TARGET_CURRENT] == 16.0
+    assert result[COMMAND_TARGET_CURRENT] == 160
 
 
 async def test_polled_data_charging_state_mapped_to_letter():

@@ -7,11 +7,11 @@ and overrides the target current (register 261) with the FailSafe
 Current (register 262, deci-amps; 0 or 60..160). When HA resumes
 polling, the target-current register takes over again.
 
-Wire format is ms and deci-amps; the capability exposes the values in
-their natural units (seconds, amps) on the coordinator side so the
-number entities can present them without further conversion. The
-entity descriptions carry the multipliers that convert back to the
-wire format on write.
+Capability passes the raw wire values (ms, deci-amps) through to the
+coordinator data dict. The number entities own the display conversion:
+their `multiplier` is applied symmetrically — divide on read, multiply
+on write — so callers of `self.coordinator.data[key]` see the same
+wire-format integer that goes back over Modbus.
 """
 
 from __future__ import annotations
@@ -49,9 +49,11 @@ class WatchdogCapability(Capability):
     )
 
     def decode_polled(self, registers: dict[int, int]) -> dict[str, Any]:
+        # Both are bidirectional; the number entities apply their multipliers
+        # symmetrically on read and write. Capability returns raw wire values.
         return {
-            COMMAND_WATCHDOG_TIMEOUT: registers[REG_WATCHDOG_TIMEOUT] / 1000.0,
-            COMMAND_FAILSAFE_CURRENT: registers[REG_FAILSAFE_CURRENT] / 10.0,
+            COMMAND_WATCHDOG_TIMEOUT: registers[REG_WATCHDOG_TIMEOUT],
+            COMMAND_FAILSAFE_CURRENT: registers[REG_FAILSAFE_CURRENT],
         }
 
     def supports_write(self, key: str) -> bool:

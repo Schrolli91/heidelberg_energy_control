@@ -5,8 +5,9 @@ timeout, a single missed poll will trigger the FailSafe current. The
 coordinator watches for that config mismatch on each successful update
 and logs a one-shot warning so the user can retune before it bites.
 
-The watchdog timeout is stored in seconds in the coordinator data
-(the capability divides the raw ms register value by 1000).
+The watchdog timeout is stored in the coordinator data as raw
+milliseconds (wire format); the headroom check converts to seconds
+locally for the like-for-like comparison against the scan interval.
 
 Rules:
   - Watchdog disabled (timeout = 0) or unknown → no warning.
@@ -64,7 +65,7 @@ async def test_no_warning_when_poll_headroom_is_sufficient(hass, mock_api, caplo
     coord = _make_coordinator(hass, mock_api, scan_interval=5)
     mock_api.async_get_data.return_value = {
         COMMAND_TARGET_CURRENT: 0.0,
-        COMMAND_WATCHDOG_TIMEOUT: 15.0,
+        COMMAND_WATCHDOG_TIMEOUT: 15000,
     }
 
     await coord._async_update_data()
@@ -77,7 +78,7 @@ async def test_warning_when_poll_too_slow_for_watchdog(hass, mock_api, caplog):
     coord = _make_coordinator(hass, mock_api, scan_interval=30)
     mock_api.async_get_data.return_value = {
         COMMAND_TARGET_CURRENT: 0.0,
-        COMMAND_WATCHDOG_TIMEOUT: 15.0,
+        COMMAND_WATCHDOG_TIMEOUT: 15000,
     }
 
     await coord._async_update_data()
@@ -90,7 +91,7 @@ async def test_warning_fires_only_once(hass, mock_api, caplog):
     coord = _make_coordinator(hass, mock_api, scan_interval=30)
     mock_api.async_get_data.return_value = {
         COMMAND_TARGET_CURRENT: 0.0,
-        COMMAND_WATCHDOG_TIMEOUT: 15.0,
+        COMMAND_WATCHDOG_TIMEOUT: 15000,
     }
 
     await coord._async_update_data()

@@ -56,9 +56,13 @@ async def test_initial_sync_hw_zero_keeps_switch_off(hass, mock_api):
 
 
 async def test_initial_sync_hw_nonzero_enables_switch_and_seeds_slider(hass, mock_api):
-    """Wallbox reports 12 A on startup → virtual switch ON, slider catches up to 12 A."""
+    """Wallbox reports 12 A on startup → virtual switch ON, slider catches up to 12 A.
+
+    Coordinator data holds COMMAND_TARGET_CURRENT as raw deci-amps (120 = 12.0 A);
+    virtual-logic path converts to amps for comparison and storage.
+    """
     coord = _make_coordinator(hass, mock_api)
-    mock_api.async_get_data.return_value = {COMMAND_TARGET_CURRENT: 12.0}
+    mock_api.async_get_data.return_value = {COMMAND_TARGET_CURRENT: 120}
 
     result = await coord._async_update_data()
 
@@ -93,7 +97,7 @@ async def test_external_hw_nonzero_with_switch_off_flips_switch_on(hass, mock_ap
     coord.target_current = 10.0
     coord._initial_fetch_done = True
 
-    mock_api.async_get_data.return_value = {COMMAND_TARGET_CURRENT: 14.0}
+    mock_api.async_get_data.return_value = {COMMAND_TARGET_CURRENT: 140}
     result = await coord._async_update_data()
 
     assert coord.logic_enabled is True

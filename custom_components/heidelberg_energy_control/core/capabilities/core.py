@@ -163,7 +163,9 @@ class CoreCapability(Capability):
             DATA_IS_PLUGGED: state_reg >= 4,
             DATA_IS_CHARGING: power_reg > 0,
             COMMAND_REMOTE_LOCK: registers[REG_COMMAND_REMOTE_LOCK] == 0,
-            COMMAND_TARGET_CURRENT: registers[REG_COMMAND_TARGET_CURRENT] / 10.0,
+            # Bidirectional value: capability returns raw deci-amps, the number
+            # entity applies its multiplier symmetrically on read and write.
+            COMMAND_TARGET_CURRENT: registers[REG_COMMAND_TARGET_CURRENT],
         }
 
     def supports_write(self, key: str) -> bool:

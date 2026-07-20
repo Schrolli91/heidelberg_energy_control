@@ -12,12 +12,22 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class HeidelbergNumber(HeidelbergEntityBase, NumberEntity):
-    """Base class for Heidelberg hardware number entities (Modbus)."""
+    """Base class for Heidelberg hardware number entities (Modbus).
+
+    Coordinator data holds raw wire values (e.g. deci-amps, milliseconds).
+    The entity's `multiplier` converts between display units and the wire
+    format symmetrically: divide on read, multiply on write.
+    """
 
     @property
     def native_value(self) -> float | None:
-        """Return the value from coordinator data."""
-        return self.coordinator.data.get(self.entity_description.key)
+        """Return the display value, converted from the raw coordinator data."""
+        raw = self.coordinator.data.get(self.entity_description.key)
+        if raw is None:
+            return None
+        if self.entity_description.multiplier is None:
+            return raw
+        return raw / self.entity_description.multiplier
 
     async def async_set_native_value(self, value: float) -> None:
         """Write value to hardware and update coordinator data."""
@@ -36,5 +46,5 @@ class HeidelbergNumber(HeidelbergEntityBase, NumberEntity):
         )
 
         if success:
-            self.coordinator.data[self.entity_description.key] = value
+            self.coordinator.data[self.entity_description.key] = modbus_value
             self.coordinator.async_set_updated_data(self.coordinator.data)

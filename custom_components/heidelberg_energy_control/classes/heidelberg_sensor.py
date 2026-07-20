@@ -11,7 +11,18 @@ class HeidelbergSensor(HeidelbergEntityBase, SensorEntity):
 
     @property
     def native_value(self) -> Any:
-        """Return value from coordinator."""
+        """Return the display value from coordinator data.
+
+        If the description carries a `multiplier`, the sensor mirrors the
+        number-entity contract: capability data is raw wire form, sensor
+        divides on read.
+        """
         if not self.coordinator.data:
             return None
-        return self.coordinator.data.get(self.entity_description.key)
+        raw = self.coordinator.data.get(self.entity_description.key)
+        if raw is None:
+            return None
+        multiplier = getattr(self.entity_description, "multiplier", None)
+        if multiplier is None:
+            return raw
+        return raw / multiplier

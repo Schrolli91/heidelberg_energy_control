@@ -121,7 +121,8 @@ def test_decode_polled_returns_full_output_from_dict():
     assert result[DATA_CURRENT_L1] == 16.0
     assert result[DATA_TOTAL_ENERGY] == 12345.6
     assert result[DATA_IS_CHARGING] is True
-    assert result[COMMAND_TARGET_CURRENT] == 16.0
+    # Bidirectional value: capability returns raw deci-amps (160 = 16.0 A).
+    assert result[COMMAND_TARGET_CURRENT] == 160
     assert result[COMMAND_REMOTE_LOCK] is False
 
 
