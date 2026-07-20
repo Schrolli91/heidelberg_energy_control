@@ -7,10 +7,11 @@ and overrides the target current (register 261) with the FailSafe
 Current (register 262, deci-amps; 0 or 60..160). When HA resumes
 polling, the target-current register takes over again.
 
-This capability exposes both values as number entities so users can
-tune the safety net for their setup: a longer timeout tolerates
-network hiccups, a non-zero failsafe keeps the car charging at a
-safe rate instead of stopping outright.
+Wire format is ms and deci-amps; the capability exposes the values in
+their natural units (seconds, amps) on the coordinator side so the
+number entities can present them without further conversion. The
+entity descriptions carry the multipliers that convert back to the
+wire format on write.
 """
 
 from __future__ import annotations
@@ -49,7 +50,7 @@ class WatchdogCapability(Capability):
 
     def decode_polled(self, registers: dict[int, int]) -> dict[str, Any]:
         return {
-            COMMAND_WATCHDOG_TIMEOUT: registers[REG_WATCHDOG_TIMEOUT],
+            COMMAND_WATCHDOG_TIMEOUT: registers[REG_WATCHDOG_TIMEOUT] / 1000.0,
             COMMAND_FAILSAFE_CURRENT: registers[REG_FAILSAFE_CURRENT] / 10.0,
         }
 

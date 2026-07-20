@@ -62,7 +62,7 @@ This integration provides a comprehensive set of entities to monitor and control
 * **Charging Current Limit**: Adjust the maximum allowed charging current (6A - 16A).
 * **Remote Lock**: Disable and lock the charging process to prevent unauthorized use.
 * **Standby Mode**: Enable or disable the wallbox power-saving standby function (requires firmware ≥ 1.0.8).
-* **Watchdog & FailSafe**: Configure the wallbox's built-in safety net for Home Assistant comms loss — Watchdog Timeout (ms; 0 disables) and FailSafe Current (A) that takes over if HA stops polling. Requires firmware ≥ 1.0.8.
+* **Watchdog & FailSafe**: Configure the wallbox's built-in safety net for Home Assistant comms loss — Watchdog Timeout (s; 0 disables) and FailSafe Current (A) that takes over if HA stops polling. Requires firmware ≥ 1.0.8.
 
 #### 📊 Monitoring (Sensors)
 * **Charging Power**: Real-time power consumption in Watts.

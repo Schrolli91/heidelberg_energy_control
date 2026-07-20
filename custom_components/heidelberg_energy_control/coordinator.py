@@ -237,17 +237,17 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
         """
         if self._watchdog_warning_logged:
             return
-        timeout_ms = data.get(COMMAND_WATCHDOG_TIMEOUT)
-        if not timeout_ms:  # None or 0 (watchdog disabled)
+        timeout_seconds = data.get(COMMAND_WATCHDOG_TIMEOUT)
+        if not timeout_seconds:  # None or 0 (watchdog disabled)
             return
-        headroom_ms = self._scan_interval_seconds * 1500  # 1.5x margin
-        if headroom_ms > timeout_ms:
+        headroom_seconds = self._scan_interval_seconds * 1.5
+        if headroom_seconds > timeout_seconds:
             _LOGGER.warning(
                 "Poll interval %ss leaves no headroom for the wallbox watchdog "
-                "(timeout %sms). A single missed poll may trigger the FailSafe "
+                "(timeout %ss). A single missed poll may trigger the FailSafe "
                 "current. Consider a shorter poll interval or a longer watchdog.",
                 self._scan_interval_seconds,
-                timeout_ms,
+                timeout_seconds,
             )
             self._watchdog_warning_logged = True
 
