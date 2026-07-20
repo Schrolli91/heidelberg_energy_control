@@ -11,6 +11,7 @@ jobs:
     permissions:
       pull-requests: write
       contents: read
+      statuses: write
     steps:
       - name: PR Conventional Commit Validation
         uses: ytanikin/pr-conventional-commits@1.4.0
