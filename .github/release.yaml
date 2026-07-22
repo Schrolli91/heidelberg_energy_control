@@ -13,12 +13,11 @@ changelog:
       labels:
         - bug
         - fix
-    - title: "⏱️ Performance & Diagnostics"
-      labels:
-        - perf
     - title: "📖 Documentation"
       labels:
         - docs
     - title: "🧰 Maintenance"
       labels:
         - chore
+        - ci
+        - perf
