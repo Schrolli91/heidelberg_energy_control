@@ -58,9 +58,7 @@ class HeidelbergSensorEntityDescription(SensorEntityDescription):
 
     capability: type[Capability]
 
-    # For bidirectional wire values that appear as both a number entity and a
-    # diagnostic sensor: the capability stores raw wire form, both entities
-    # divide by multiplier on read.
+    # Optional: display-unit divisor for values on raw wire form.
     multiplier: float | None = None
 
 

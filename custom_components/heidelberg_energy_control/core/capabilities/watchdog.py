@@ -49,8 +49,6 @@ class WatchdogCapability(Capability):
     )
 
     def decode_polled(self, registers: dict[int, int]) -> dict[str, Any]:
-        # Both are bidirectional; the number entities apply their multipliers
-        # symmetrically on read and write. Capability returns raw wire values.
         return {
             COMMAND_WATCHDOG_TIMEOUT: registers[REG_WATCHDOG_TIMEOUT],
             COMMAND_FAILSAFE_CURRENT: registers[REG_FAILSAFE_CURRENT],

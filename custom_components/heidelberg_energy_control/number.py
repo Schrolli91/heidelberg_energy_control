@@ -32,7 +32,7 @@ class HeidelbergNumberEntityDescription(NumberEntityDescription):
 
     capability: type[Capability]
 
-    # Optional: virtual numbers don't need it
+    # Optional: display-unit divisor for values on raw wire form.
     multiplier: float | None = None
 
 

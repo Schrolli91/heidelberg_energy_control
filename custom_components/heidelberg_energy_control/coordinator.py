@@ -105,8 +105,7 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
                 return data
 
             # --- Virtual Logic (only for V1.0.7+) ---
-            # COMMAND_TARGET_CURRENT is deci-amps in coordinator data; convert
-            # to amps for the virtual-slider comparison and storage.
+            # Raw value is deci-amps; convert to amps for the virtual entities.
             hw_current = float(data.get(COMMAND_TARGET_CURRENT, 0)) / 10.0
 
             # Initial sync on startup: Read wallbox current state
@@ -168,7 +167,6 @@ class HeidelbergEnergyControlCoordinator(DataUpdateCoordinator):
                 COMMAND_TARGET_CURRENT, modbus_value
             )
 
-            # Coordinator data holds the raw wire value (deci-amps).
             self.data[COMMAND_TARGET_CURRENT] = modbus_value
             self.async_update_listeners()
 

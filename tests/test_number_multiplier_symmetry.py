@@ -82,6 +82,19 @@ async def test_number_write_multiplies_and_stores_raw():
     assert coord.data[COMMAND_TARGET_CURRENT] == 120
 
 
+async def test_number_write_passthrough_when_multiplier_is_none():
+    """A None multiplier means the display value is already the wire value."""
+    coord = _mock_coordinator({COMMAND_TARGET_CURRENT: 0})
+    entity = _make_number_entity(coord, multiplier=None)
+
+    await entity.async_set_native_value(42.0)
+
+    coord.api.async_write_command.assert_awaited_once_with(
+        COMMAND_TARGET_CURRENT, 42
+    )
+    assert coord.data[COMMAND_TARGET_CURRENT] == 42
+
+
 async def test_number_round_trip_read_after_write():
     """Set 8.5 A, then read: entity shows 8.5 A back."""
     coord = _mock_coordinator({COMMAND_TARGET_CURRENT: 0})
@@ -104,12 +117,13 @@ def test_sensor_native_value_divides_by_multiplier():
     assert entity.native_value == 16.0
 
 
-def test_sensor_native_value_passthrough_when_multiplier_missing():
-    """Sensors without a multiplier return raw coordinator values (backwards compat)."""
+def test_sensor_native_value_passthrough_when_multiplier_is_none():
+    """A None multiplier means the wire value is already the display value."""
     coord = _mock_coordinator({"data_current_l1": 16.0})
     entry = MagicMock()
     entry.entry_id = "test"
-    desc = MagicMock(spec=[])  # spec=[] => no multiplier attr
+    desc = MagicMock()
     desc.key = "data_current_l1"
+    desc.multiplier = None
     entity = HeidelbergSensor(coord, entry, desc)
     assert entity.native_value == 16.0

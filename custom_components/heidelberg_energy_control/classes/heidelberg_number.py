@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-import logging
-
 from homeassistant.components.number import NumberEntity
 
 from ..classes.heidelberg_entity_base import HeidelbergEntityBase
-
-_LOGGER = logging.getLogger(__name__)
 
 
 class HeidelbergNumber(HeidelbergEntityBase, NumberEntity):
@@ -16,7 +12,9 @@ class HeidelbergNumber(HeidelbergEntityBase, NumberEntity):
 
     Coordinator data holds raw wire values (e.g. deci-amps, milliseconds).
     The entity's `multiplier` converts between display units and the wire
-    format symmetrically: divide on read, multiply on write.
+    format symmetrically: divide on read, multiply on write. A `None`
+    multiplier means the wire value is already the display value on both
+    sides.
     """
 
     @property
@@ -31,15 +29,10 @@ class HeidelbergNumber(HeidelbergEntityBase, NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         """Write value to hardware and update coordinator data."""
-
         if self.entity_description.multiplier is None:
-            _LOGGER.error(
-                "Cannot write %s: Missing multiplier in description",
-                self.entity_description.key,
-            )
-            return
-
-        modbus_value = int(value * self.entity_description.multiplier)
+            modbus_value = int(value)
+        else:
+            modbus_value = int(value * self.entity_description.multiplier)
 
         success = await self.coordinator.api.async_write_command(
             self.entity_description.key, modbus_value
