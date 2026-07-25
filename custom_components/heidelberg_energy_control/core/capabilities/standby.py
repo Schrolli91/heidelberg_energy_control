@@ -43,6 +43,22 @@ class StandbyCapability(Capability):
         RegisterDefinition(REG_COMMAND_STANDBY, 1, RegisterType.HOLDING),
     )
 
+    async def async_probe(self, client: Any, device_id: int) -> bool:
+        """Probe register 258 to confirm the standby block is present.
+
+        Layout version alone is not enough: the Amperfied connect-series
+        reports a layout >= 1.0.8 but does not expose register 258.
+        Reading the register in isolation avoids the batched-read failure
+        that would otherwise poison the 257..262 holding block.
+        """
+        try:
+            result = await client.read_holding_registers(
+                address=REG_COMMAND_STANDBY, count=1, device_id=device_id
+            )
+        except (ModbusException, OSError):
+            return False
+        return not result.isError()
+
     def decode_polled(self, registers: dict[int, int]) -> dict[str, Any]:
         # Switch is "on" when the standby function is enabled (register = 0).
         return {COMMAND_STANDBY: registers[REG_COMMAND_STANDBY] == _STANDBY_ENABLED}

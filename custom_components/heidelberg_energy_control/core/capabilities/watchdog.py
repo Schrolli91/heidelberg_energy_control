@@ -48,6 +48,22 @@ class WatchdogCapability(Capability):
         RegisterDefinition(REG_FAILSAFE_CURRENT, 1, RegisterType.HOLDING),
     )
 
+    async def async_probe(self, client: Any, device_id: int) -> bool:
+        """Probe register 257 to confirm the watchdog block is present.
+
+        Layout version alone is not enough: the Amperfied connect-series
+        reports a layout >= 1.0.8 but does not expose registers 257/258.
+        Reading the register in isolation avoids the batched-read failure
+        that would otherwise poison the whole 257..262 holding block.
+        """
+        try:
+            result = await client.read_holding_registers(
+                address=REG_WATCHDOG_TIMEOUT, count=1, device_id=device_id
+            )
+        except (ModbusException, OSError):
+            return False
+        return not result.isError()
+
     def decode_polled(self, registers: dict[int, int]) -> dict[str, Any]:
         return {
             COMMAND_WATCHDOG_TIMEOUT: registers[REG_WATCHDOG_TIMEOUT],
