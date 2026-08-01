@@ -5,12 +5,17 @@ Pins:
   2. Polled block declares 19..20 in one input read.
   3. decode_polled combines the pair high-word-first and converts
      wire VAh to kWh (divide by 1000).
-  4. No probe override — presence is inferred from the version gate,
-     matching every other v2.0.0+ input register in the spec.
+  4. Probe returns True only when register 19 reads cleanly; illegal
+     address, ModbusException, and OSError all skip the capability
+     to avoid poisoning the merged 5..20 batch at poll time.
   5. No writes.
 """
 
 from __future__ import annotations
+
+from unittest.mock import AsyncMock, MagicMock
+
+from pymodbus.exceptions import ModbusException
 
 from custom_components.heidelberg_energy_control.const import DATA_SESSION_ENERGY
 from custom_components.heidelberg_energy_control.core.capabilities.session_energy import (
@@ -65,3 +70,45 @@ def test_decode_polled_ignores_unrelated_addresses():
 def test_session_energy_owns_no_writes():
     cap = SessionEnergyCapability()
     assert cap.supports_write("anything") is False
+
+
+# ---------- probe ----------
+
+
+async def test_probe_true_when_register_19_readable():
+    cap = SessionEnergyCapability()
+    client = MagicMock()
+    ok = MagicMock()
+    ok.isError = MagicMock(return_value=False)
+    client.read_input_registers = AsyncMock(return_value=ok)
+
+    assert await cap.async_probe(client, device_id=1) is True
+    client.read_input_registers.assert_awaited_once_with(
+        address=REG_SESSION_ENERGY_START, count=1, device_id=1
+    )
+
+
+async def test_probe_false_on_illegal_address_response():
+    cap = SessionEnergyCapability()
+    client = MagicMock()
+    err = MagicMock()
+    err.isError = MagicMock(return_value=True)
+    client.read_input_registers = AsyncMock(return_value=err)
+
+    assert await cap.async_probe(client, device_id=1) is False
+
+
+async def test_probe_false_on_modbus_exception():
+    cap = SessionEnergyCapability()
+    client = MagicMock()
+    client.read_input_registers = AsyncMock(side_effect=ModbusException("boom"))
+
+    assert await cap.async_probe(client, device_id=1) is False
+
+
+async def test_probe_false_on_oserror():
+    cap = SessionEnergyCapability()
+    client = MagicMock()
+    client.read_input_registers = AsyncMock(side_effect=OSError("network down"))
+
+    assert await cap.async_probe(client, device_id=1) is False

@@ -159,8 +159,10 @@ def _connect_series_client() -> MagicMock:
         (200, 1): [3],
         (203, 1): [3],
         (5, 14): [7, 0, 0, 0, 362, 237, 1, 1, 1, 1, 0, 0, 0, 3615],
-        # v2.0.0+ session-energy pair: block-merged with 5..18 into (5, 16)
+        # v2.0.0+ session-energy: probe at (19, 1), then block-merged with
+        # 5..18 into (5, 16) during polling.
         (5, 16): [7, 0, 0, 0, 362, 237, 1, 1, 1, 1, 0, 0, 0, 3615, 0, 0],
+        (19, 1): [0],
         (19, 2): [0, 0],
         # MidMeterCapability probes reg 3000. This connect-series unit
         # doesn't implement MID — the probe read returns illegal-address,

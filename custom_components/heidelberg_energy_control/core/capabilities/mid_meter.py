@@ -19,12 +19,17 @@ Registers owned by this capability:
     3004-3006   Voltage L1-N/L2-N/L3-N  (V)
     3007        Power forward           (W)
     3008-3009   Energy forward, 32-bit  (Wh; billing-grade)
-    3010        Power reverse           (W; spec-noted not-implemented, skipped)
+    3010        Power reverse           (W; spec-noted not-implemented)
     3011-3012   Energy reverse, 32-bit  (Wh)
 
-The 3001-3012 range is read as a single block per poll. Register 3010
-sits inside that block but is not decoded: reading it costs nothing
-extra, and once Amperfied enables it we only need to add a decode line.
+The polled definitions declare two non-contiguous blocks (3001..3009
+and 3011..3012). Register 3010 falls in the gap on purpose: the spec
+notes it "not yet implemented" for bidirectional operation, and any
+partial-MID unit that rejects reg 3010 would otherwise atomically
+fail a merged 3001..3012 read — the same failure mode as issue #16
+around registers 257/258. Splitting the block isolates the failure
+to reverse-energy alone; forward-energy (the billing register) is
+still read even if reverse is absent.
 
 Energy values are wire-Wh; the capability converts to kWh so all
 energy sensors in the integration share one unit.
@@ -51,20 +56,27 @@ from ..registers import RegisterDefinition, RegisterType, pack_32bit
 from .base import Capability
 
 REG_MID_AVAILABLE = 3000
-REG_MID_BLOCK_START = 3001
-REG_MID_BLOCK_COUNT = 12  # 3001..3012 inclusive
+REG_MID_FORWARD_START = 3001
+REG_MID_FORWARD_COUNT = 9   # 3001..3009: currents, voltages, power fwd, energy fwd
+REG_MID_REVERSE_START = 3011
+REG_MID_REVERSE_COUNT = 2   # 3011..3012: energy reverse (skips 3010 power-reverse)
 
 _MID_PRESENT = 1
 
 
 class MidMeterCapability(Capability):
-    """Internal MID power meter (registers 3000..3012)."""
+    """Internal MID power meter (registers 3000..3012, split around 3010)."""
 
     key = "mid_meter"
     min_layout_version = "2.0.0"
 
     polled_definitions: tuple[RegisterDefinition, ...] = (
-        RegisterDefinition(REG_MID_BLOCK_START, REG_MID_BLOCK_COUNT, RegisterType.INPUT),
+        RegisterDefinition(
+            REG_MID_FORWARD_START, REG_MID_FORWARD_COUNT, RegisterType.INPUT
+        ),
+        RegisterDefinition(
+            REG_MID_REVERSE_START, REG_MID_REVERSE_COUNT, RegisterType.INPUT
+        ),
     )
 
     async def async_probe(self, client: Any, device_id: int) -> bool:
@@ -86,21 +98,21 @@ class MidMeterCapability(Capability):
 
     def decode_polled(self, registers: dict[int, int]) -> dict[str, Any]:
         return {
-            DATA_MID_CURRENT_L1: registers[REG_MID_BLOCK_START] / 10.0,
-            DATA_MID_CURRENT_L2: registers[REG_MID_BLOCK_START + 1] / 10.0,
-            DATA_MID_CURRENT_L3: registers[REG_MID_BLOCK_START + 2] / 10.0,
-            DATA_MID_VOLTAGE_L1: registers[REG_MID_BLOCK_START + 3],
-            DATA_MID_VOLTAGE_L2: registers[REG_MID_BLOCK_START + 4],
-            DATA_MID_VOLTAGE_L3: registers[REG_MID_BLOCK_START + 5],
-            DATA_MID_POWER_FORWARD: registers[REG_MID_BLOCK_START + 6],
+            DATA_MID_CURRENT_L1: registers[REG_MID_FORWARD_START] / 10.0,
+            DATA_MID_CURRENT_L2: registers[REG_MID_FORWARD_START + 1] / 10.0,
+            DATA_MID_CURRENT_L3: registers[REG_MID_FORWARD_START + 2] / 10.0,
+            DATA_MID_VOLTAGE_L1: registers[REG_MID_FORWARD_START + 3],
+            DATA_MID_VOLTAGE_L2: registers[REG_MID_FORWARD_START + 4],
+            DATA_MID_VOLTAGE_L3: registers[REG_MID_FORWARD_START + 5],
+            DATA_MID_POWER_FORWARD: registers[REG_MID_FORWARD_START + 6],
             DATA_MID_ENERGY_FORWARD: pack_32bit(
-                registers[REG_MID_BLOCK_START + 7],
-                registers[REG_MID_BLOCK_START + 8],
+                registers[REG_MID_FORWARD_START + 7],
+                registers[REG_MID_FORWARD_START + 8],
             )
             / 1000.0,
             DATA_MID_ENERGY_REVERSE: pack_32bit(
-                registers[REG_MID_BLOCK_START + 10],
-                registers[REG_MID_BLOCK_START + 11],
+                registers[REG_MID_REVERSE_START],
+                registers[REG_MID_REVERSE_START + 1],
             )
             / 1000.0,
         }

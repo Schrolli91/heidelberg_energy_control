@@ -57,7 +57,8 @@ def build_mock_modbus_client(fixture: dict[str, list[int]]) -> MagicMock:
         (200, "input_200_hw_vers"),
         (203, "input_203_sw_vers"),
         (3000, "input_3000_mid_available"),
-        (3001, "input_3001_3012_mid_block"),
+        (3001, "input_3001_3009_mid_forward"),
+        (3011, "input_3011_3012_mid_reverse"),
     ]
     for start, fixture_key in input_blocks:
         if fixture_key in fixture:
