@@ -1,10 +1,14 @@
 {
-  "_comment": "Real capture from a connect-series v2.0.4 wallbox (layout register 4 = 0x204). Vehicle plugged in, state 'C', single-phase install (only L1 wired), idle at minimum target current 6.0 A — currents and active power are 0.",
+  "_comment": "Real capture from a connect-series v2.0.4 wallbox (layout register 4 = 0x204). Vehicle plugged in, state 'C', single-phase install (only L1 wired), idle at minimum target current 6.0 A — currents and active power are 0. Session energy (19-20) and MID blocks (forward 3001-3009, reverse 3011-3012; reg 3010 intentionally omitted per spec) are synthesized for test coverage: session = 1.234 kWh (raw 1234 Wh); MID present, L1 = 12.3 A / 231 V, power 2851 W, forward energy 5.678 kWh, reverse energy 0.",
   "input_4_layout": [516],
   "input_5_18_data": [7, 0, 0, 0, 362, 237, 1, 1, 1, 1, 0, 0, 0, 3615],
+  "input_19_20_session": [0, 1234],
   "input_100_101_hw_curr": [16, 6],
   "input_200_hw_vers": [3],
   "input_203_sw_vers": [3],
+  "input_3000_mid_available": [1],
+  "input_3001_3009_mid_forward": [123, 0, 0, 231, 0, 0, 2851, 0, 5678],
+  "input_3011_3012_mid_reverse": [0, 0],
   "holding_259_remote_lock": [1],
   "holding_261_target_current": [60]
 }

@@ -90,6 +90,33 @@
       },
       "hw_max_current": {
         "name": "Configured Max. Current"
+      },
+      "mid_current_l1": {
+        "name": "MID Current L1"
+      },
+      "mid_current_l2": {
+        "name": "MID Current L2"
+      },
+      "mid_current_l3": {
+        "name": "MID Current L3"
+      },
+      "mid_voltage_l1": {
+        "name": "MID Voltage L1"
+      },
+      "mid_voltage_l2": {
+        "name": "MID Voltage L2"
+      },
+      "mid_voltage_l3": {
+        "name": "MID Voltage L3"
+      },
+      "mid_power_forward": {
+        "name": "MID Power"
+      },
+      "mid_energy_forward": {
+        "name": "MID Energy (imported)"
+      },
+      "mid_energy_reverse": {
+        "name": "MID Energy (exported)"
       }
     },
     "binary_sensor": {

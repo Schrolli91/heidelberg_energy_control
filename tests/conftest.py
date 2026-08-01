@@ -43,17 +43,43 @@ def build_mock_modbus_client(fixture: dict[str, list[int]]) -> MagicMock:
     client.connect = AsyncMock(side_effect=_connect)
     client.close = MagicMock(side_effect=lambda: setattr(client, "connected", False))
 
-    input_reads = {
-        (4, 1): fixture["input_4_layout"],
-        (5, 14): fixture["input_5_18_data"],
-        (100, 2): fixture["input_100_101_hw_curr"],
-        (200, 1): fixture["input_200_hw_vers"],
-        (203, 1): fixture["input_203_sw_vers"],
-    }
-    holding_reads = {
-        (259, 1): fixture["holding_259_remote_lock"],
-        (261, 1): fixture["holding_261_target_current"],
-    }
+    # Flatten each fixture block into a {address: value} map. The API's
+    # block-merging read path can request any window over these addresses;
+    # the mock slices the requested range out of the map. A read that
+    # includes any address not in the map fails, mimicking the wallbox
+    # returning an illegal-address error for the whole batch.
+    input_map: dict[int, int] = {}
+    input_blocks: list[tuple[int, str]] = [
+        (4, "input_4_layout"),
+        (5, "input_5_18_data"),
+        (19, "input_19_20_session"),
+        (100, "input_100_101_hw_curr"),
+        (200, "input_200_hw_vers"),
+        (203, "input_203_sw_vers"),
+        (3000, "input_3000_mid_available"),
+        (3001, "input_3001_3009_mid_forward"),
+        (3011, "input_3011_3012_mid_reverse"),
+    ]
+    for start, fixture_key in input_blocks:
+        if fixture_key in fixture:
+            for offset, value in enumerate(fixture[fixture_key]):
+                input_map[start + offset] = value
+
+    holding_map: dict[int, int] = {}
+    holding_blocks: list[tuple[int, str]] = [
+        (259, "holding_259_remote_lock"),
+        (261, "holding_261_target_current"),
+    ]
+    for start, fixture_key in holding_blocks:
+        if fixture_key in fixture:
+            for offset, value in enumerate(fixture[fixture_key]):
+                holding_map[start + offset] = value
+
+    def _slice(register_map: dict[int, int], address: int, count: int) -> list[int] | None:
+        window = [register_map.get(address + i) for i in range(count)]
+        if any(v is None for v in window):
+            return None
+        return window
 
     def _response(registers: list[int] | None):
         rr = MagicMock()
@@ -66,10 +92,10 @@ def build_mock_modbus_client(fixture: dict[str, list[int]]) -> MagicMock:
         return rr
 
     async def _read_input(address, count, device_id):
-        return _response(input_reads.get((address, count)))
+        return _response(_slice(input_map, address, count))
 
     async def _read_holding(address, count, device_id):
-        return _response(holding_reads.get((address, count)))
+        return _response(_slice(holding_map, address, count))
 
     async def _write_register(address, value, device_id):
         return _response([value])

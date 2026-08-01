@@ -159,10 +159,21 @@ def _connect_series_client() -> MagicMock:
         (200, 1): [3],
         (203, 1): [3],
         (5, 14): [7, 0, 0, 0, 362, 237, 1, 1, 1, 1, 0, 0, 0, 3615],
+        # v2.0.0+ session-energy: probe at (19, 1), then block-merged with
+        # 5..18 into (5, 16) during polling.
+        (5, 16): [7, 0, 0, 0, 362, 237, 1, 1, 1, 1, 0, 0, 0, 3615, 0, 0],
+        (19, 1): [0],
+        (19, 2): [0, 0],
+        # MidMeterCapability probes reg 3000. This connect-series unit
+        # doesn't implement MID — the probe read returns illegal-address,
+        # so 3001..3012 never enters the polled block.
     }
 
     async def _read_input(address, count, device_id):
-        return _make_response(input_reads.get((address, count), []))
+        registers = input_reads.get((address, count))
+        if registers is None:
+            return _make_response(None, is_error=True)
+        return _make_response(registers)
 
     async def _read_holding(address, count, device_id):
         # Register 257 (watchdog) and 258 (standby) don't exist on connect-series

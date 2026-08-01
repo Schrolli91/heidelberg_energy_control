@@ -26,6 +26,9 @@ from . import HeidelbergEnergyControlConfigEntry
 from .classes.heidelberg_sensor import HeidelbergSensor
 from .classes.heidelberg_sensor_active_phases import HeidelbergSensorActivePhases
 from .classes.heidelberg_sensor_coordinator import HeidelbergSensorCoordinator
+from .classes.heidelberg_sensor_energy_hw_session import (
+    HeidelbergSensorEnergyHwSession,
+)
 from .classes.heidelberg_sensor_energy_session import HeidelbergSensorEnergySession
 from .classes.heidelberg_sensor_energy_total import HeidelbergSensorEnergyTotal
 from .const import (
@@ -39,6 +42,15 @@ from .const import (
     DATA_ENERGY_SINCE_POWER_ON,
     DATA_HW_MIN_CURR,
     DATA_HW_MAX_CURR,
+    DATA_MID_CURRENT_L1,
+    DATA_MID_CURRENT_L2,
+    DATA_MID_CURRENT_L3,
+    DATA_MID_ENERGY_FORWARD,
+    DATA_MID_ENERGY_REVERSE,
+    DATA_MID_POWER_FORWARD,
+    DATA_MID_VOLTAGE_L1,
+    DATA_MID_VOLTAGE_L2,
+    DATA_MID_VOLTAGE_L3,
     DATA_PCB_TEMPERATURE,
     DATA_PHASES_ACTIVE,
     DATA_SESSION_ENERGY,
@@ -47,7 +59,12 @@ from .const import (
     DATA_VOLTAGE_L2,
     DATA_VOLTAGE_L3,
 )
-from .core.capabilities import Capability, CoreCapability
+from .core.capabilities import (
+    Capability,
+    CoreCapability,
+    MidMeterCapability,
+    SessionEnergyCapability,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -233,6 +250,91 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         entity_registry_enabled_default=False,
         capability=CoreCapability,
     ),
+    # ---- MID power meter (v2.0.0+, hardware-optional) ----
+    HeidelbergSensorEntityDescription(
+        key=DATA_MID_CURRENT_L1,
+        translation_key=DATA_MID_CURRENT_L1,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        entity_registry_enabled_default=False,
+        capability=MidMeterCapability,
+    ),
+    HeidelbergSensorEntityDescription(
+        key=DATA_MID_CURRENT_L2,
+        translation_key=DATA_MID_CURRENT_L2,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        entity_registry_enabled_default=False,
+        capability=MidMeterCapability,
+    ),
+    HeidelbergSensorEntityDescription(
+        key=DATA_MID_CURRENT_L3,
+        translation_key=DATA_MID_CURRENT_L3,
+        native_unit_of_measurement=UnitOfElectricCurrent.AMPERE,
+        device_class=SensorDeviceClass.CURRENT,
+        state_class=SensorStateClass.MEASUREMENT,
+        suggested_display_precision=1,
+        entity_registry_enabled_default=False,
+        capability=MidMeterCapability,
+    ),
+    HeidelbergSensorEntityDescription(
+        key=DATA_MID_VOLTAGE_L1,
+        translation_key=DATA_MID_VOLTAGE_L1,
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+        capability=MidMeterCapability,
+    ),
+    HeidelbergSensorEntityDescription(
+        key=DATA_MID_VOLTAGE_L2,
+        translation_key=DATA_MID_VOLTAGE_L2,
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+        capability=MidMeterCapability,
+    ),
+    HeidelbergSensorEntityDescription(
+        key=DATA_MID_VOLTAGE_L3,
+        translation_key=DATA_MID_VOLTAGE_L3,
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+        capability=MidMeterCapability,
+    ),
+    HeidelbergSensorEntityDescription(
+        key=DATA_MID_POWER_FORWARD,
+        translation_key=DATA_MID_POWER_FORWARD,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        capability=MidMeterCapability,
+    ),
+    HeidelbergSensorEntityDescription(
+        key=DATA_MID_ENERGY_FORWARD,
+        translation_key=DATA_MID_ENERGY_FORWARD,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        suggested_display_precision=2,
+        capability=MidMeterCapability,
+    ),
+    HeidelbergSensorEntityDescription(
+        key=DATA_MID_ENERGY_REVERSE,
+        translation_key=DATA_MID_ENERGY_REVERSE,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        device_class=SensorDeviceClass.ENERGY,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        suggested_display_precision=2,
+        entity_registry_enabled_default=False,
+        capability=MidMeterCapability,
+    ),
 )
 
 
@@ -253,9 +355,18 @@ async def async_setup_entry(
                     HeidelbergSensorEnergyTotal(coordinator, entry, description)
                 )
             elif description.key == DATA_SESSION_ENERGY:
-                entities.append(
-                    HeidelbergSensorEnergySession(coordinator, entry, description)
-                )
+                # Prefer the hardware register 19..20 (v2.0.0+) over the
+                # plug-edge derived counter when both are present.
+                if SessionEnergyCapability in loaded_types:
+                    entities.append(
+                        HeidelbergSensorEnergyHwSession(
+                            coordinator, entry, description
+                        )
+                    )
+                else:
+                    entities.append(
+                        HeidelbergSensorEnergySession(coordinator, entry, description)
+                    )
             elif description.key == DATA_PHASES_ACTIVE:
                 entities.append(
                     HeidelbergSensorActivePhases(coordinator, entry, description)

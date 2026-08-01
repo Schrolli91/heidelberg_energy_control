@@ -29,9 +29,19 @@ from custom_components.heidelberg_energy_control.const import (
     DATA_HW_VERSION,
     DATA_IS_CHARGING,
     DATA_IS_PLUGGED,
+    DATA_MID_CURRENT_L1,
+    DATA_MID_CURRENT_L2,
+    DATA_MID_CURRENT_L3,
+    DATA_MID_ENERGY_FORWARD,
+    DATA_MID_ENERGY_REVERSE,
+    DATA_MID_POWER_FORWARD,
+    DATA_MID_VOLTAGE_L1,
+    DATA_MID_VOLTAGE_L2,
+    DATA_MID_VOLTAGE_L3,
     DATA_PCB_TEMPERATURE,
     DATA_PHASES_ACTIVE,
     DATA_REG_LAYOUT_VER,
+    DATA_SESSION_ENERGY,
     DATA_SW_VERSION,
     DATA_TOTAL_ENERGY,
     DATA_VOLTAGE_L1,
@@ -114,6 +124,18 @@ VARIANT_V2_0_4 = pytest.param(
         DATA_IS_CHARGING: True,  # power_reg > 0 → True even at 1 W (sensor noise)
         COMMAND_REMOTE_LOCK: False,
         COMMAND_TARGET_CURRENT: 60,
+        # SessionEnergyCapability (v2.0.0+): raw 1234 VAh → 1.234 kWh
+        DATA_SESSION_ENERGY: 1.234,
+        # MidMeterCapability (probed present in the fixture)
+        DATA_MID_CURRENT_L1: 12.3,
+        DATA_MID_CURRENT_L2: 0.0,
+        DATA_MID_CURRENT_L3: 0.0,
+        DATA_MID_VOLTAGE_L1: 231,
+        DATA_MID_VOLTAGE_L2: 0,
+        DATA_MID_VOLTAGE_L3: 0,
+        DATA_MID_POWER_FORWARD: 2851,
+        DATA_MID_ENERGY_FORWARD: 5.678,
+        DATA_MID_ENERGY_REVERSE: 0.0,
     },
     id="v2.0.4-real",
 )
@@ -170,8 +192,13 @@ async def test_static_data_decoding(fixture_name, expected_static, expected_poll
 
 @pytest.mark.parametrize(("fixture_name", "expected_static", "expected_polled"), VARIANTS)
 async def test_polled_data_decoding_full_dict(fixture_name, expected_static, expected_polled):
-    """Polled data: complete dict equality against each captured fixture."""
+    """Polled data: complete dict equality against each captured fixture.
+
+    Static setup runs first so version-gated capabilities can register
+    themselves before the polled read — mirrors the production flow.
+    """
     api = _make_api(fixture_name)
+    await api.async_get_static_data()
     assert await api.async_get_data() == expected_polled
 
 
