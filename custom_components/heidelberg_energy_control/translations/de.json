@@ -117,6 +117,9 @@
       },
       "mid_energy_reverse": {
         "name": "MID Energie (eingespeist)"
+      },
+      "max_power_set": {
+        "name": "Eingestellte maximale Leistung"
       }
     },
     "binary_sensor": {
@@ -151,6 +154,9 @@
       },
       "watchdog_timeout_command": {
         "name": "Watchdog-Timeout"
+      },
+      "max_power_target_command": {
+        "name": "Maximale Leistungsvorgabe"
       }
     },
     "switch": {

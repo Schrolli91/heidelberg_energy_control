@@ -42,6 +42,7 @@ from .const import (
     DATA_ENERGY_SINCE_POWER_ON,
     DATA_HW_MIN_CURR,
     DATA_HW_MAX_CURR,
+    DATA_MAX_POWER_SET,
     DATA_MID_CURRENT_L1,
     DATA_MID_CURRENT_L2,
     DATA_MID_CURRENT_L3,
@@ -63,6 +64,7 @@ from .core.capabilities import (
     Capability,
     CoreCapability,
     MidMeterCapability,
+    PowerTargetCapability,
     SessionEnergyCapability,
 )
 
@@ -334,6 +336,15 @@ SENSOR_TYPES: tuple[HeidelbergSensorEntityDescription, ...] = (
         suggested_display_precision=2,
         entity_registry_enabled_default=False,
         capability=MidMeterCapability,
+    ),
+    HeidelbergSensorEntityDescription(
+        key=DATA_MAX_POWER_SET,
+        translation_key=DATA_MAX_POWER_SET,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        capability=PowerTargetCapability,
     ),
 )
 

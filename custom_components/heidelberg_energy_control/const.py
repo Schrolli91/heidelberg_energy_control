@@ -44,6 +44,9 @@ DATA_EXTERNAL_LOCK_STATE = "external_lock_state"
 DATA_ENERGY_SINCE_POWER_ON = "energy_since_power_on"
 DATA_TOTAL_ENERGY = "total_energy"
 DATA_SESSION_ENERGY = "session_energy"
+# Maximal power target (v2.0.2+, connect.solar only; drives the
+# wallbox-internal automatic phase switch via register 500)
+DATA_MAX_POWER_SET = "max_power_set"
 # MID power meter (v2.0.0+, hardware-optional, probed via reg 3000)
 DATA_MID_CURRENT_L1 = "mid_current_l1"
 DATA_MID_CURRENT_L2 = "mid_current_l2"
@@ -59,6 +62,7 @@ DATA_IS_PLUGGED = "is_plugged"
 DATA_IS_CHARGING = "is_charging"
 # Hardware Command
 COMMAND_FAILSAFE_CURRENT = "failsafe_current_command"
+COMMAND_MAX_POWER_TARGET = "max_power_target_command"
 COMMAND_REMOTE_LOCK = "remote_lock_command"
 COMMAND_STANDBY = "standby_function_control"
 COMMAND_TARGET_CURRENT = "max_current_command"
