@@ -63,6 +63,21 @@ This integration provides a comprehensive set of entities to monitor and control
 * **Remote Lock**: Disable and lock the charging process to prevent unauthorized use.
 * **Standby Mode**: Enable or disable the wallbox power-saving standby function (requires firmware ≥ 1.0.8).
 * **Watchdog & FailSafe**: Configure the wallbox's built-in safety net for Home Assistant comms loss — Watchdog Timeout (s; 0 disables) and FailSafe Current (A) that takes over if HA stops polling. Requires firmware ≥ 1.0.8.
+* **Maximal Power Target**: Set a power ceiling in Watts (0 disables) and let the wallbox choose 1-phase or 3-phase operation by itself — the automatic phase switch. Requires a connect.solar / connect.solar pro wallbox with firmware ≥ 2.0.2. **Read the note below before using it.**
+
+> ### ⚠️ Choose one control method — current *or* power
+>
+> This integration gives you two independent ways to limit charging, and it is up to you to pick one:
+>
+> * **Charging Current Limit** (Modbus register 261) — you set the amps, and you choose the number of phases yourself.
+> * **Maximal Power Target** (Modbus register 500) — you set the watts, and the wallbox decides 1-phase or 3-phase on its own.
+>
+> Amperfied's register specification states that these two are **mutually exclusive**. This integration deliberately does *not* enforce that, so you are free to use whichever suits your setup — but driving both at the same time hands the wallbox two conflicting ceilings, and which one wins is undefined.
+>
+> * **To use the power target:** set the Watts you want, and leave the Charging Current Limit at its maximum.
+> * **To use the current limit:** leave the Maximal Power Target at `0`, which disables it.
+>
+> **Charge Enable always works.** It stops the charge by writing `0` to register 261, and that takes effect whether or not a power target is set — you can always stop charging from Home Assistant. What is undefined is the case where both limits are *active* at the same time: a current limit and a power target can contradict each other, and the specification does not say which one the wallbox will follow.
 
 #### 📊 Monitoring (Sensors)
 * **Charging Power**: Real-time power consumption in Watts.
@@ -80,6 +95,7 @@ This integration provides a comprehensive set of entities to monitor and control
 * **Hardware Limit (Min and Max)**: Displays the physical current limit, set via modbus on the wallbox.
 * **External Lock**: Status of the hardware lock contact.
 * **Internal Temperature**: Monitor the housing temperature of the wallbox.
+* **Maximal Power Set**: Reads back the power target currently stored in the wallbox (W).
 
 #### 🏠 Local Control
 * **No Cloud Required**: Works completely offline via your local network.
