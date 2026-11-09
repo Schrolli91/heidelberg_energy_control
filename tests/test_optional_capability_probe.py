@@ -16,8 +16,8 @@ never enter the coalescing pool.
 
 These tests pin that behavior:
   1. Probe returns True when the register read succeeds
-  2. Probe returns False on isError() (illegal address response)
-  3. Probe returns False on ModbusException
+  2. Probe returns False on an illegal-address exception
+  3. Probe returns False on ModbusError
   4. Probe returns False on OSError
   5. End-to-end: async_get_static_data skips capabilities whose probe
      returned False, so their registers are never read during polling
@@ -27,7 +27,7 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
-from pymodbus.exceptions import ModbusException
+from modbus_connection import IllegalDataAddressError, ModbusError
 
 from custom_components.heidelberg_energy_control.core.api import (
     HeidelbergEnergyControlAPI,
@@ -48,33 +48,29 @@ from custom_components.heidelberg_energy_control.core.capabilities.watchdog impo
 async def test_watchdog_probe_true_when_register_readable():
     cap = WatchdogCapability()
     client = MagicMock()
-    ok = MagicMock()
-    ok.isError = MagicMock(return_value=False)
-    client.read_holding_registers = AsyncMock(return_value=ok)
+    client.read_holding_registers = AsyncMock(return_value=[0])
 
-    assert await cap.async_probe(client, device_id=1) is True
+    assert await cap.async_probe(client) is True
     client.read_holding_registers.assert_awaited_once_with(
-        address=REG_WATCHDOG_TIMEOUT, count=1, device_id=1
+        address=REG_WATCHDOG_TIMEOUT, count=1
     )
 
 
 async def test_watchdog_probe_false_on_illegal_address_response():
-    """pymodbus returns a response object with isError() True — not a raised exception."""
+    """An unmapped optional register is reported as an exception."""
     cap = WatchdogCapability()
     client = MagicMock()
-    err = MagicMock()
-    err.isError = MagicMock(return_value=True)
-    client.read_holding_registers = AsyncMock(return_value=err)
+    client.read_holding_registers = AsyncMock(side_effect=IllegalDataAddressError())
 
-    assert await cap.async_probe(client, device_id=1) is False
+    assert await cap.async_probe(client) is False
 
 
 async def test_watchdog_probe_false_on_modbus_exception():
     cap = WatchdogCapability()
     client = MagicMock()
-    client.read_holding_registers = AsyncMock(side_effect=ModbusException("boom"))
+    client.read_holding_registers = AsyncMock(side_effect=ModbusError("boom"))
 
-    assert await cap.async_probe(client, device_id=1) is False
+    assert await cap.async_probe(client) is False
 
 
 async def test_watchdog_probe_false_on_oserror():
@@ -82,7 +78,7 @@ async def test_watchdog_probe_false_on_oserror():
     client = MagicMock()
     client.read_holding_registers = AsyncMock(side_effect=OSError("network down"))
 
-    assert await cap.async_probe(client, device_id=1) is False
+    assert await cap.async_probe(client) is False
 
 
 # ---------- probe: standby ----------
@@ -91,32 +87,28 @@ async def test_watchdog_probe_false_on_oserror():
 async def test_standby_probe_true_when_register_readable():
     cap = StandbyCapability()
     client = MagicMock()
-    ok = MagicMock()
-    ok.isError = MagicMock(return_value=False)
-    client.read_holding_registers = AsyncMock(return_value=ok)
+    client.read_holding_registers = AsyncMock(return_value=[0])
 
-    assert await cap.async_probe(client, device_id=1) is True
+    assert await cap.async_probe(client) is True
     client.read_holding_registers.assert_awaited_once_with(
-        address=REG_COMMAND_STANDBY, count=1, device_id=1
+        address=REG_COMMAND_STANDBY, count=1
     )
 
 
 async def test_standby_probe_false_on_illegal_address_response():
     cap = StandbyCapability()
     client = MagicMock()
-    err = MagicMock()
-    err.isError = MagicMock(return_value=True)
-    client.read_holding_registers = AsyncMock(return_value=err)
+    client.read_holding_registers = AsyncMock(side_effect=IllegalDataAddressError())
 
-    assert await cap.async_probe(client, device_id=1) is False
+    assert await cap.async_probe(client) is False
 
 
 async def test_standby_probe_false_on_modbus_exception():
     cap = StandbyCapability()
     client = MagicMock()
-    client.read_holding_registers = AsyncMock(side_effect=ModbusException("boom"))
+    client.read_holding_registers = AsyncMock(side_effect=ModbusError("boom"))
 
-    assert await cap.async_probe(client, device_id=1) is False
+    assert await cap.async_probe(client) is False
 
 
 async def test_standby_probe_false_on_oserror():
@@ -124,7 +116,7 @@ async def test_standby_probe_false_on_oserror():
     client = MagicMock()
     client.read_holding_registers = AsyncMock(side_effect=OSError("network down"))
 
-    assert await cap.async_probe(client, device_id=1) is False
+    assert await cap.async_probe(client) is False
 
 
 # ---------- end-to-end: connect-series scenario ----------
@@ -134,25 +126,10 @@ def _connect_series_client() -> MagicMock:
     """Mock a connect-series wallbox: layout 2.0.4, no 257/258, has 259 and 261.
 
     Serves the core-capability static reads (regs 4, 100/101, 200, 203),
-    then responds with isError()=True to any read of holding 257 or 258.
+    then raises IllegalDataAddressError for holding 257 and 258.
     All other holding reads succeed with dummy data.
     """
     client = MagicMock()
-    client.connected = False
-
-    async def _connect() -> bool:
-        client.connected = True
-        return True
-
-    client.connect = AsyncMock(side_effect=_connect)
-    client.close = MagicMock()
-
-    def _make_response(registers, is_error=False):
-        rr = MagicMock()
-        rr.isError = MagicMock(return_value=is_error)
-        rr.registers = registers if registers else []
-        return rr
-
     input_reads = {
         (4, 1): [0x204],       # layout 2.0.4 — passes 1.0.8 gate for both caps
         (100, 2): [16, 6],
@@ -169,23 +146,23 @@ def _connect_series_client() -> MagicMock:
         # so 3001..3012 never enters the polled block.
     }
 
-    async def _read_input(address, count, device_id):
+    async def _read_input(address, count):
         registers = input_reads.get((address, count))
         if registers is None:
-            return _make_response(None, is_error=True)
-        return _make_response(registers)
+            raise IllegalDataAddressError()
+        return registers
 
-    async def _read_holding(address, count, device_id):
+    async def _read_holding(address, count):
         # Register 257 (watchdog) and 258 (standby) don't exist on connect-series
         # — either as single-register probes or as part of any coalesced batch
         # that includes them. Register 259 (remote lock) does exist.
         if address <= 258 < address + count or address == 257:
-            return _make_response(None, is_error=True)
+            raise IllegalDataAddressError()
         if address == 259 and count == 1:
-            return _make_response([1])
+            return [1]
         if address == 261 and count == 1:
-            return _make_response([60])
-        return _make_response(None, is_error=True)
+            return [60]
+        raise IllegalDataAddressError()
 
     client.read_input_registers = AsyncMock(side_effect=_read_input)
     client.read_holding_registers = AsyncMock(side_effect=_read_holding)
@@ -194,8 +171,7 @@ def _connect_series_client() -> MagicMock:
 
 async def test_static_setup_skips_watchdog_and_standby_on_connect_series():
     """Regression for issue #16: setup completes and neither capability loads."""
-    api = HeidelbergEnergyControlAPI(host="x", port=502, device_id=1)
-    api._client = _connect_series_client()
+    api = HeidelbergEnergyControlAPI(_connect_series_client())
 
     static = await api.async_get_static_data()
 
@@ -216,9 +192,8 @@ async def test_polled_reads_omit_unavailable_registers_on_connect_series():
     are expected to touch 257 and 258 by design, so we only inspect the
     reads that happen *after* setup completes.
     """
-    api = HeidelbergEnergyControlAPI(host="x", port=502, device_id=1)
     client = _connect_series_client()
-    api._client = client
+    api = HeidelbergEnergyControlAPI(client)
 
     await api.async_get_static_data()
     client.read_holding_registers.reset_mock()

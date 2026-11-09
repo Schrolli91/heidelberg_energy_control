@@ -19,7 +19,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from pymodbus.exceptions import ModbusException
+from modbus_connection import ModbusError, ModbusUnit
 
 from ...const import COMMAND_FAILSAFE_CURRENT, COMMAND_WATCHDOG_TIMEOUT
 from ..exceptions import HeidelbergEnergyControlWriteError
@@ -48,7 +48,7 @@ class WatchdogCapability(Capability):
         RegisterDefinition(REG_FAILSAFE_CURRENT, 1, RegisterType.HOLDING),
     )
 
-    async def async_probe(self, client: Any, device_id: int) -> bool:
+    async def async_probe(self, unit: ModbusUnit) -> bool:
         """Probe register 257 to confirm the watchdog block is present.
 
         Layout version alone is not enough: the Amperfied connect-series
@@ -57,12 +57,10 @@ class WatchdogCapability(Capability):
         that would otherwise poison the whole 257..262 holding block.
         """
         try:
-            result = await client.read_holding_registers(
-                address=REG_WATCHDOG_TIMEOUT, count=1, device_id=device_id
-            )
-        except (ModbusException, OSError):
+            await unit.read_holding_registers(address=REG_WATCHDOG_TIMEOUT, count=1)
+        except (ModbusError, OSError):
             return False
-        return not result.isError()
+        return True
 
     def decode_polled(self, registers: dict[int, int]) -> dict[str, Any]:
         return {
@@ -74,19 +72,13 @@ class WatchdogCapability(Capability):
         return key in _COMMAND_REGISTERS
 
     async def async_write(
-        self, client: Any, device_id: int, key: str, value: int
+        self, unit: ModbusUnit, key: str, value: int
     ) -> bool:
         address = _COMMAND_REGISTERS[key]
         try:
-            result = await client.write_register(
-                address=address, value=int(value), device_id=device_id
-            )
-            if result.isError():
-                raise HeidelbergEnergyControlWriteError(
-                    f"Failed to write command {key} (register {address})"
-                )
+            await unit.write_register(address=address, value=int(value))
             return True
-        except (ModbusException, OSError) as err:
+        except (ModbusError, OSError) as err:
             _LOGGER.error(
                 "Error on writing command %s (reg %s): %s", key, address, err
             )

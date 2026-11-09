@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pymodbus.exceptions import ModbusException
+from modbus_connection import ModbusError, ModbusUnit
 
 from ...const import DATA_SESSION_ENERGY
 from ..registers import RegisterDefinition, RegisterType, pack_32bit
@@ -48,7 +48,7 @@ class SessionEnergyCapability(Capability):
         ),
     )
 
-    async def async_probe(self, client: Any, device_id: int) -> bool:
+    async def async_probe(self, unit: ModbusUnit) -> bool:
         """Probe register 19 to confirm the session-energy pair is present.
 
         Skipped on an illegal-address response, ModbusException, or
@@ -58,12 +58,10 @@ class SessionEnergyCapability(Capability):
         atomically every poll.
         """
         try:
-            result = await client.read_input_registers(
-                address=REG_SESSION_ENERGY_START, count=1, device_id=device_id
-            )
-        except (ModbusException, OSError):
+            await unit.read_input_registers(address=REG_SESSION_ENERGY_START, count=1)
+        except (ModbusError, OSError):
             return False
-        return not result.isError()
+        return True
 
     def decode_polled(self, registers: dict[int, int]) -> dict[str, Any]:
         return {

@@ -81,27 +81,25 @@ def test_supports_write_matches_only_standby_key():
 async def test_async_write_forwards_value_to_register_258():
     cap = StandbyCapability()
     client = MagicMock()
-    write_result = MagicMock()
-    write_result.isError = MagicMock(return_value=False)
-    client.write_register = AsyncMock(return_value=write_result)
+    client.write_register = AsyncMock(return_value=None)
 
-    ok = await cap.async_write(client, device_id=1, key=COMMAND_STANDBY, value=4)
+    ok = await cap.async_write(client, key=COMMAND_STANDBY, value=4)
 
     assert ok is True
     client.write_register.assert_awaited_once_with(
-        address=REG_COMMAND_STANDBY, value=4, device_id=1
+        address=REG_COMMAND_STANDBY, value=4
     )
 
 
-async def test_async_write_raises_on_modbus_error_response():
+async def test_async_write_raises_on_modbus_error():
     cap = StandbyCapability()
     client = MagicMock()
-    write_result = MagicMock()
-    write_result.isError = MagicMock(return_value=True)
-    client.write_register = AsyncMock(return_value=write_result)
+    from modbus_connection import ModbusError
+
+    client.write_register = AsyncMock(side_effect=ModbusError("write refused"))
 
     with pytest.raises(HeidelbergEnergyControlWriteError):
-        await cap.async_write(client, device_id=1, key=COMMAND_STANDBY, value=0)
+        await cap.async_write(client, key=COMMAND_STANDBY, value=0)
 
 
 # ---------- end-to-end: dispatch via api.async_write_command ----------
@@ -109,23 +107,10 @@ async def test_async_write_raises_on_modbus_error_response():
 
 def _api_with_standby_loaded() -> tuple[HeidelbergEnergyControlAPI, MagicMock]:
     """Build an API instance with Core + Standby capabilities pre-loaded."""
-    api = HeidelbergEnergyControlAPI(host="x", port=502, device_id=1)
-    api._capabilities.append(StandbyCapability())
-
     client = MagicMock()
-    client.connected = True
-
-    async def _noop_connect() -> bool:
-        return True
-
-    client.connect = AsyncMock(side_effect=_noop_connect)
-    client.close = MagicMock()
-
-    write_result = MagicMock()
-    write_result.isError = MagicMock(return_value=False)
-    client.write_register = AsyncMock(return_value=write_result)
-
-    api._client = client
+    client.write_register = AsyncMock(return_value=None)
+    api = HeidelbergEnergyControlAPI(client)
+    api._capabilities.append(StandbyCapability())
     return api, client
 
 
@@ -137,5 +122,5 @@ async def test_api_async_write_command_dispatches_standby_to_register_258():
 
     assert ok is True
     client.write_register.assert_awaited_once_with(
-        address=REG_COMMAND_STANDBY, value=4, device_id=1
+        address=REG_COMMAND_STANDBY, value=4
     )

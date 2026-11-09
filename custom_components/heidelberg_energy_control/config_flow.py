@@ -7,6 +7,8 @@ from typing import Any
 
 import voluptuous as vol
 
+from modbus_connection import ModbusTcpParams
+from homeassistant.components.modbus import async_get_temporary_unit
 from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
@@ -14,7 +16,7 @@ from homeassistant.config_entries import (
     OptionsFlow,
 )
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_SCAN_INTERVAL
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import selector
 
 from .const import CONF_DEVICE_ID, DEFAULT_SCAN_INTERVAL, DOMAIN
@@ -38,23 +40,20 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 )
 
 
-async def validate_input(data: dict[str, Any]) -> dict[str, Any]:
+async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect."""
-    api = HeidelbergEnergyControlAPI(
-        host=data[CONF_HOST],
-        port=data[CONF_PORT],
-        device_id=data[CONF_DEVICE_ID],
-    )
-
     try:
-        static_data = await api.async_get_static_data()
-        await api.disconnect()
+        params = ModbusTcpParams(host=data[CONF_HOST], port=data[CONF_PORT])
+        async with async_get_temporary_unit(
+            hass, params, data[CONF_DEVICE_ID]
+        ) as unit:
+            api = HeidelbergEnergyControlAPI(unit)
+            static_data = await api.async_get_static_data()
 
         if static_data is None:
             raise HeidelbergEnergyControlReadError(
                 "Wallbox connected but did not respond to requests"
             )
-
     except HeidelbergEnergyControlConnectionError:
         raise
     except HeidelbergEnergyControlReadError:
@@ -84,7 +83,7 @@ class HeidelbergEnergyControlConfigFlow(ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
             try:
-                info = await validate_input(user_input)
+                info = await validate_input(self.hass, user_input)
                 return self.async_create_entry(title=info["title"], data=user_input)
             except HeidelbergEnergyControlConnectionError:
                 errors["base"] = "cannot_connect"

@@ -102,48 +102,44 @@ def test_supports_write_matches_both_watchdog_keys():
 async def test_async_write_timeout_forwards_ms_to_register_257():
     cap = WatchdogCapability()
     client = MagicMock()
-    write_result = MagicMock()
-    write_result.isError = MagicMock(return_value=False)
-    client.write_register = AsyncMock(return_value=write_result)
+    client.write_register = AsyncMock(return_value=None)
 
     ok = await cap.async_write(
-        client, device_id=1, key=COMMAND_WATCHDOG_TIMEOUT, value=20000
+        client, key=COMMAND_WATCHDOG_TIMEOUT, value=20000
     )
 
     assert ok is True
     client.write_register.assert_awaited_once_with(
-        address=REG_WATCHDOG_TIMEOUT, value=20000, device_id=1
+        address=REG_WATCHDOG_TIMEOUT, value=20000
     )
 
 
 async def test_async_write_failsafe_forwards_deciamps_to_register_262():
     cap = WatchdogCapability()
     client = MagicMock()
-    write_result = MagicMock()
-    write_result.isError = MagicMock(return_value=False)
-    client.write_register = AsyncMock(return_value=write_result)
+    client.write_register = AsyncMock(return_value=None)
 
     # Number entity does the *10 conversion; capability receives deci-amps.
     ok = await cap.async_write(
-        client, device_id=1, key=COMMAND_FAILSAFE_CURRENT, value=80
+        client, key=COMMAND_FAILSAFE_CURRENT, value=80
     )
 
     assert ok is True
     client.write_register.assert_awaited_once_with(
-        address=REG_FAILSAFE_CURRENT, value=80, device_id=1
+        address=REG_FAILSAFE_CURRENT, value=80
     )
 
 
-async def test_async_write_raises_on_modbus_error_response():
+async def test_async_write_raises_on_modbus_error():
     cap = WatchdogCapability()
     client = MagicMock()
-    write_result = MagicMock()
-    write_result.isError = MagicMock(return_value=True)
-    client.write_register = AsyncMock(return_value=write_result)
+    from modbus_connection import ModbusError
+
+    client.write_register = AsyncMock(side_effect=ModbusError("write refused"))
 
     with pytest.raises(HeidelbergEnergyControlWriteError):
         await cap.async_write(
-            client, device_id=1, key=COMMAND_WATCHDOG_TIMEOUT, value=15000
+            client, key=COMMAND_WATCHDOG_TIMEOUT, value=15000
         )
 
 
@@ -151,23 +147,10 @@ async def test_async_write_raises_on_modbus_error_response():
 
 
 def _api_with_watchdog_loaded() -> tuple[HeidelbergEnergyControlAPI, MagicMock]:
-    api = HeidelbergEnergyControlAPI(host="x", port=502, device_id=1)
-    api._capabilities.append(WatchdogCapability())
-
     client = MagicMock()
-    client.connected = True
-
-    async def _noop_connect() -> bool:
-        return True
-
-    client.connect = AsyncMock(side_effect=_noop_connect)
-    client.close = MagicMock()
-
-    write_result = MagicMock()
-    write_result.isError = MagicMock(return_value=False)
-    client.write_register = AsyncMock(return_value=write_result)
-
-    api._client = client
+    client.write_register = AsyncMock(return_value=None)
+    api = HeidelbergEnergyControlAPI(client)
+    api._capabilities.append(WatchdogCapability())
     return api, client
 
 
@@ -178,7 +161,7 @@ async def test_api_dispatch_watchdog_timeout():
 
     assert ok is True
     client.write_register.assert_awaited_once_with(
-        address=REG_WATCHDOG_TIMEOUT, value=15000, device_id=1
+        address=REG_WATCHDOG_TIMEOUT, value=15000
     )
 
 
@@ -189,5 +172,5 @@ async def test_api_dispatch_failsafe_current():
 
     assert ok is True
     client.write_register.assert_awaited_once_with(
-        address=REG_FAILSAFE_CURRENT, value=60, device_id=1
+        address=REG_FAILSAFE_CURRENT, value=60
     )

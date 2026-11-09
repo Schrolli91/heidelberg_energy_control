@@ -11,6 +11,8 @@ shows up against every captured fixture, not just one.
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 
 from custom_components.heidelberg_energy_control.const import (
@@ -55,7 +57,7 @@ from custom_components.heidelberg_energy_control.core.exceptions import (
     HeidelbergEnergyControlAPIError,
 )
 
-from .conftest import build_mock_modbus_client, load_fixture
+from .conftest import build_mock_modbus_unit, load_fixture
 
 
 # ---------- variant definitions ----------
@@ -147,9 +149,9 @@ VARIANTS = [VARIANT_V1_0_7, VARIANT_V2_0_4]
 
 
 def _make_api(fixture_name: str) -> HeidelbergEnergyControlAPI:
-    """Build an API instance backed by a fixture's mock modbus client."""
-    instance = HeidelbergEnergyControlAPI(host="1.2.3.4", port=502, device_id=1)
-    instance._client = build_mock_modbus_client(load_fixture(fixture_name))
+    """Build an API instance backed by a fixture's mock ModbusUnit."""
+    unit = build_mock_modbus_unit(load_fixture(fixture_name))
+    instance = HeidelbergEnergyControlAPI(unit)
     return instance
 
 
@@ -158,7 +160,7 @@ def _make_api(fixture_name: str) -> HeidelbergEnergyControlAPI:
 
 async def test_register_to_version_decodes_nibbles():
     """Each hex nibble of the register is one semver component."""
-    api = HeidelbergEnergyControlAPI(host="x", port=1, device_id=1)
+    api = HeidelbergEnergyControlAPI(MagicMock())
     assert api._register_to_version(0x107) == "1.0.7"
     assert api._register_to_version(0x100) == "1.0.0"
     assert api._register_to_version(0x108) == "1.0.8"
@@ -167,7 +169,7 @@ async def test_register_to_version_decodes_nibbles():
 
 async def test_to_32bit_combines_high_low_word():
     """High word is the first register, low word the second."""
-    api = HeidelbergEnergyControlAPI(host="x", port=1, device_id=1)
+    api = HeidelbergEnergyControlAPI(MagicMock())
     assert api._to_32bit([0x0001, 0x2345], 0) == 0x12345
     assert api._to_32bit([0x0000, 0x0000], 0) == 0
     assert api._to_32bit([0xFFFF, 0xFFFF], 0) == 0xFFFFFFFF
@@ -175,7 +177,7 @@ async def test_to_32bit_combines_high_low_word():
 
 async def test_to_32bit_raises_when_index_out_of_bounds():
     """Off-by-one at the end of the register list must raise, not silently read OOB."""
-    api = HeidelbergEnergyControlAPI(host="x", port=1, device_id=1)
+    api = HeidelbergEnergyControlAPI(MagicMock())
     with pytest.raises(HeidelbergEnergyControlAPIError):
         api._to_32bit([0x0001], 0)
 
