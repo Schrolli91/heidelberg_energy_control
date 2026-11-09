@@ -5,10 +5,10 @@
     "@Schrolli91"
   ],
   "config_flow": true,
-  "dependencies": [
+  "connectivity": [
     "modbus"
   ],
-  "connectivity": [
+  "dependencies": [
     "modbus"
   ],
   "documentation": "https://github.com/Schrolli91/heidelberg_energy_control",
