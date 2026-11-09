@@ -39,7 +39,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pymodbus.exceptions import ModbusException
+from modbus_connection import ModbusError, ModbusUnit
 
 from ...const import (
     DATA_MID_CURRENT_L1,
@@ -79,7 +79,7 @@ class MidMeterCapability(Capability):
         ),
     )
 
-    async def async_probe(self, client: Any, device_id: int) -> bool:
+    async def async_probe(self, unit: ModbusUnit) -> bool:
         """Probe register 3000 to decide whether the MID meter is fitted.
 
         Two failure modes to catch: the register isn't mapped (illegal
@@ -87,14 +87,14 @@ class MidMeterCapability(Capability):
         mean "skip capability" so its polled block is never read.
         """
         try:
-            result = await client.read_input_registers(
-                address=REG_MID_AVAILABLE, count=1, device_id=device_id
+            registers = await unit.read_input_registers(
+                address=REG_MID_AVAILABLE, count=1
             )
-        except (ModbusException, OSError):
+        except (ModbusError, OSError):
             return False
-        if result.isError() or not result.registers:
+        if not registers:
             return False
-        return result.registers[0] == _MID_PRESENT
+        return registers[0] == _MID_PRESENT
 
     def decode_polled(self, registers: dict[int, int]) -> dict[str, Any]:
         return {

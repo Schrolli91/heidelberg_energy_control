@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from pymodbus.exceptions import ModbusException
+from modbus_connection import ModbusError, ModbusUnit
 
 from ...const import (
     CHARGING_STATE_MAP,
@@ -170,19 +170,13 @@ class CoreCapability(Capability):
         return key in _COMMAND_REGISTERS
 
     async def async_write(
-        self, client: Any, device_id: int, key: str, value: int
+        self, unit: ModbusUnit, key: str, value: int
     ) -> bool:
         address = _COMMAND_REGISTERS[key]
         try:
-            result = await client.write_register(
-                address=address, value=int(value), device_id=device_id
-            )
-            if result.isError():
-                raise HeidelbergEnergyControlWriteError(
-                    f"Failed to write command {key} (register {address})"
-                )
+            await unit.write_register(address=address, value=int(value))
             return True
-        except (ModbusException, OSError) as err:
+        except (ModbusError, OSError) as err:
             _LOGGER.error("Error on writing command %s (reg %s): %s", key, address, err)
             raise HeidelbergEnergyControlWriteError(
                 f"Failed to write command {key} (register {address}): {err}"

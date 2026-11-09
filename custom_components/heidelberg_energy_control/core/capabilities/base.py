@@ -17,6 +17,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from modbus_connection import ModbusUnit
+
 from ..registers import RegisterDefinition
 
 
@@ -29,7 +31,7 @@ class Capability:
     static_definitions: tuple[RegisterDefinition, ...] = ()
     polled_definitions: tuple[RegisterDefinition, ...] = ()
 
-    async def async_probe(self, client: Any, device_id: int) -> bool:
+    async def async_probe(self, unit: ModbusUnit) -> bool:
         """Runtime check after the version gate passes.
 
         Default: always supported. Override when presence depends on a
@@ -56,7 +58,7 @@ class Capability:
         return False
 
     async def async_write(
-        self, client: Any, device_id: int, key: str, value: int
+        self, unit: ModbusUnit, key: str, value: int
     ) -> bool:
         """Perform a write owned by this capability, addressed by command key."""
         raise NotImplementedError

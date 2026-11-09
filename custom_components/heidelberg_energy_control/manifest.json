@@ -5,14 +5,14 @@
     "@Schrolli91"
   ],
   "config_flow": true,
+  "connectivity": [
+    "modbus"
+  ],
   "dependencies": [
-    "homeassistant"
+    "modbus"
   ],
   "documentation": "https://github.com/Schrolli91/heidelberg_energy_control",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/Schrolli91/heidelberg_energy_control/issues",
-  "requirements": [
-    "pymodbus>=3.11.2"
-  ],
   "version": "1.3.1-b0"
 }

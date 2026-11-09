@@ -1,6 +1,6 @@
-"""API for Heidelberg Energy Control wallbox via Modbus.
+"""API for Heidelberg Energy Control wallbox via Home Assistant Modbus.
 
-Owns the Modbus client and connection lifecycle, then delegates all
+Uses a Modbus unit managed by Home Assistant, then delegates all
 register access to a set of `Capability` modules. Each capability
 contributes static and polled data and declares the writes it owns;
 the API aggregates their results into the flat dicts the coordinator
@@ -16,9 +16,8 @@ import logging
 import time
 from typing import Any
 
+from modbus_connection import ModbusConnectionError, ModbusError, ModbusUnit
 from packaging import version
-from pymodbus.client import AsyncModbusTcpClient
-from pymodbus.exceptions import ModbusException
 
 from ..const import DATA_REG_LAYOUT_VER
 from .capabilities import CAPABILITIES, Capability
@@ -37,42 +36,16 @@ _LOGGER = logging.getLogger(__name__)
 class HeidelbergEnergyControlAPI:
     """API class for Heidelberg Energy Control wallbox."""
 
-    def __init__(self, host: str, port: int, device_id: int) -> None:
-        """Initialize the API."""
-        self._host = host
-        self._port = port
-        self._device_id = device_id
-        self._client = AsyncModbusTcpClient(
-            host,
-            port=port,
-            timeout=5,
-        )
+    def __init__(self, unit: ModbusUnit) -> None:
+        """Initialize the API with a unit managed by Home Assistant."""
+        self._unit = unit
+        # Preserve the timeout previously configured on the pymodbus client.
+        unit.require_timeout(5)
         # Core capability is always present (no version floor). Additional
         # capabilities are gated by min_layout_version + runtime probe and
         # added during async_get_static_data().
         self._capabilities: list[Capability] = [CAPABILITIES[0]()]
         self._loaded: bool = False
-
-    async def connect(self) -> None:
-        """Connect to the wallbox (no-op if already connected)."""
-        if self._client.connected:
-            return
-        try:
-            result = await self._client.connect()
-            if not result:
-                raise HeidelbergEnergyControlConnectionError(
-                    "Failed to connect to the wallbox"
-                )
-        except (ModbusException, OSError) as err:
-            _LOGGER.error("Modbus connection error: %s", err)
-            raise HeidelbergEnergyControlConnectionError(
-                f"Failed to connect to the wallbox: {err}"
-            ) from err
-
-    async def disconnect(self) -> None:
-        """Disconnect from the wallbox."""
-        if self._client.connected:
-            self._client.close()
 
     @property
     def capabilities(self) -> list[Capability]:
@@ -94,8 +67,6 @@ class HeidelbergEnergyControlAPI:
         the address once). Non-consecutive addresses become separate
         block reads.
         """
-        await self.connect()
-
         result: dict[int, int] = {}
         if not definitions:
             return result
@@ -122,29 +93,24 @@ class HeidelbergEnergyControlAPI:
             total_count = end_addr - start_addr
             try:
                 if current.type == RegisterType.INPUT:
-                    read_result = await self._client.read_input_registers(
-                        address=start_addr,
-                        count=total_count,
-                        device_id=self._device_id,
+                    registers = await self._unit.read_input_registers(
+                        address=start_addr, count=total_count
                     )
                 else:
-                    read_result = await self._client.read_holding_registers(
-                        address=start_addr,
-                        count=total_count,
-                        device_id=self._device_id,
+                    registers = await self._unit.read_holding_registers(
+                        address=start_addr, count=total_count
                     )
-            except (ModbusException, OSError) as err:
+            except (ModbusError, OSError) as err:
+                if isinstance(err, ModbusConnectionError):
+                    raise HeidelbergEnergyControlConnectionError(
+                        f"Modbus connection failed: {err}"
+                    ) from err
                 raise HeidelbergEnergyControlReadError(
                     f"Failed to read {total_count} {current.type.value} register(s) at {start_addr}: {err}"
                 ) from err
 
-            if read_result.isError():
-                raise HeidelbergEnergyControlReadError(
-                    f"Failed to read {total_count} {current.type.value} register(s) at {start_addr}"
-                )
-
             for offset in range(total_count):
-                result[start_addr + offset] = read_result.registers[offset]
+                result[start_addr + offset] = registers[offset]
 
             i += merge_count
 
@@ -161,8 +127,6 @@ class HeidelbergEnergyControlAPI:
         capabilities isn't useful here because static reads only
         happen once at setup).
         """
-        await self.connect()
-
         core_cap = self._capabilities[0]
         core_regs = await self.async_read_registers(list(core_cap.static_definitions))
         static: dict[str, Any] = dict(core_cap.decode_static(core_regs))
@@ -174,7 +138,7 @@ class HeidelbergEnergyControlAPI:
             if not self._version_gate_passes(cap, layout_str):
                 continue
             try:
-                if not await cap.async_probe(self._client, self._device_id):
+                if not await cap.async_probe(self._unit):
                     continue
                 if cap.static_definitions:
                     cap_regs = await self.async_read_registers(
@@ -199,12 +163,9 @@ class HeidelbergEnergyControlAPI:
         callers never see raw addresses.
         """
         write_start = time.perf_counter()
-        await self.connect()
         for cap in self._capabilities:
             if cap.supports_write(key):
-                result = await cap.async_write(
-                    self._client, self._device_id, key, value
-                )
+                result = await cap.async_write(self._unit, key, value)
                 _LOGGER.debug(
                     "Write complete: WRITE: %.3fs",
                     time.perf_counter() - write_start,
@@ -224,8 +185,6 @@ class HeidelbergEnergyControlAPI:
         decodes its own slice from the resulting {address: value} dict.
         """
         all_start = time.perf_counter()
-        await self.connect()
-
         all_defs: list[RegisterDefinition] = []
         for cap in self._capabilities:
             all_defs.extend(cap.polled_definitions)

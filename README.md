@@ -28,6 +28,8 @@ These wallboxes are:
 - tbd
 
 ## Installation via HACS
+Requires Home Assistant **2026.9.0** or newer.
+
 This integration is part of the **HACS Default Store**. To install it:
 
 1. In Home Assistant, navigate to **HACS**.

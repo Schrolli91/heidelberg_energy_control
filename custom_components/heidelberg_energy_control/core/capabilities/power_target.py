@@ -29,7 +29,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from pymodbus.exceptions import ModbusException
+from modbus_connection import ModbusError, ModbusUnit
 
 from ...const import COMMAND_MAX_POWER_TARGET, DATA_MAX_POWER_SET
 from ..exceptions import HeidelbergEnergyControlWriteError
@@ -59,7 +59,7 @@ class PowerTargetCapability(Capability):
         RegisterDefinition(REG_MAX_POWER_SET, 1, RegisterType.INPUT),
     )
 
-    async def async_probe(self, client: Any, device_id: int) -> bool:
+    async def async_probe(self, unit: ModbusUnit) -> bool:
         """Probe register 500 to confirm the power-target block is present.
 
         The layout version only tells us the firmware generation, not the
@@ -68,12 +68,10 @@ class PowerTargetCapability(Capability):
         failure out of the batched polled read.
         """
         try:
-            result = await client.read_holding_registers(
-                address=REG_MAX_POWER_TARGET, count=1, device_id=device_id
-            )
-        except (ModbusException, OSError):
+            await unit.read_holding_registers(address=REG_MAX_POWER_TARGET, count=1)
+        except (ModbusError, OSError):
             return False
-        return not result.isError()
+        return True
 
     def decode_polled(self, registers: dict[int, int]) -> dict[str, Any]:
         return {
@@ -85,7 +83,7 @@ class PowerTargetCapability(Capability):
         return key == COMMAND_MAX_POWER_TARGET
 
     async def async_write(
-        self, client: Any, device_id: int, key: str, value: int
+        self, unit: ModbusUnit, key: str, value: int
     ) -> bool:
         """Write the power target (watts) to register 500.
 
@@ -101,16 +99,11 @@ class PowerTargetCapability(Capability):
                 f"(allowed {POWER_TARGET_MIN}..{POWER_TARGET_MAX})"
             )
         try:
-            result = await client.write_register(
-                address=REG_MAX_POWER_TARGET, value=int(value), device_id=device_id
+            await unit.write_register(
+                address=REG_MAX_POWER_TARGET, value=int(value)
             )
-            if result.isError():
-                raise HeidelbergEnergyControlWriteError(
-                    f"Failed to write command {key} "
-                    f"(register {REG_MAX_POWER_TARGET})"
-                )
             return True
-        except (ModbusException, OSError) as err:
+        except (ModbusError, OSError) as err:
             _LOGGER.error(
                 "Error on writing command %s (reg %s): %s",
                 key,

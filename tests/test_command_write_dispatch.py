@@ -35,21 +35,9 @@ from custom_components.heidelberg_energy_control.core.exceptions import (
 
 
 def _api_with_mock_client() -> tuple[HeidelbergEnergyControlAPI, MagicMock]:
-    api = HeidelbergEnergyControlAPI(host="x", port=502, device_id=1)
     client = MagicMock()
-    client.connected = True
-
-    async def _noop_connect() -> bool:
-        return True
-
-    client.connect = AsyncMock(side_effect=_noop_connect)
-    client.close = MagicMock()
-
-    write_result = MagicMock()
-    write_result.isError = MagicMock(return_value=False)
-    client.write_register = AsyncMock(return_value=write_result)
-
-    api._client = client
+    client.write_register = AsyncMock(return_value=None)
+    api = HeidelbergEnergyControlAPI(client)
     return api, client
 
 
@@ -61,7 +49,7 @@ async def test_target_current_command_writes_register_261():
 
     assert result is True
     client.write_register.assert_awaited_once_with(
-        address=REG_COMMAND_TARGET_CURRENT, value=160, device_id=1
+        address=REG_COMMAND_TARGET_CURRENT, value=160
     )
 
 
@@ -73,7 +61,7 @@ async def test_remote_lock_command_writes_register_259():
 
     assert result is True
     client.write_register.assert_awaited_once_with(
-        address=REG_COMMAND_REMOTE_LOCK, value=0, device_id=1
+        address=REG_COMMAND_REMOTE_LOCK, value=0
     )
 
 

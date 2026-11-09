@@ -23,7 +23,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from pymodbus.exceptions import ModbusException
+from modbus_connection import IllegalDataAddressError, ModbusError
 
 from custom_components.heidelberg_energy_control.const import (
     COMMAND_MAX_POWER_TARGET,
@@ -75,14 +75,12 @@ async def test_probe_reads_register_500_not_5000():
     """The whole connect.home-vs-connect.solar distinction rests on this."""
     cap = PowerTargetCapability()
     client = MagicMock()
-    ok = MagicMock()
-    ok.isError = MagicMock(return_value=False)
-    client.read_holding_registers = AsyncMock(return_value=ok)
+    client.read_holding_registers = AsyncMock(return_value=[0])
     client.read_input_registers = AsyncMock()
 
-    assert await cap.async_probe(client, device_id=1) is True
+    assert await cap.async_probe(client) is True
     client.read_holding_registers.assert_awaited_once_with(
-        address=REG_MAX_POWER_TARGET, count=1, device_id=1
+        address=REG_MAX_POWER_TARGET, count=1
     )
     client.read_input_registers.assert_not_awaited()
 
@@ -90,19 +88,17 @@ async def test_probe_reads_register_500_not_5000():
 async def test_probe_false_on_illegal_address_response():
     cap = PowerTargetCapability()
     client = MagicMock()
-    err = MagicMock()
-    err.isError = MagicMock(return_value=True)
-    client.read_holding_registers = AsyncMock(return_value=err)
+    client.read_holding_registers = AsyncMock(side_effect=IllegalDataAddressError())
 
-    assert await cap.async_probe(client, device_id=1) is False
+    assert await cap.async_probe(client) is False
 
 
 async def test_probe_false_on_modbus_exception():
     cap = PowerTargetCapability()
     client = MagicMock()
-    client.read_holding_registers = AsyncMock(side_effect=ModbusException("boom"))
+    client.read_holding_registers = AsyncMock(side_effect=ModbusError("boom"))
 
-    assert await cap.async_probe(client, device_id=1) is False
+    assert await cap.async_probe(client) is False
 
 
 async def test_probe_false_on_oserror():
@@ -110,7 +106,7 @@ async def test_probe_false_on_oserror():
     client = MagicMock()
     client.read_holding_registers = AsyncMock(side_effect=OSError("network down"))
 
-    assert await cap.async_probe(client, device_id=1) is False
+    assert await cap.async_probe(client) is False
 
 
 # ---------- decode_polled ----------
@@ -171,17 +167,13 @@ def test_does_not_claim_target_current_writes():
 async def test_async_write_forwards_in_range_values_to_register_500(watts):
     cap = PowerTargetCapability()
     client = MagicMock()
-    write_result = MagicMock()
-    write_result.isError = MagicMock(return_value=False)
-    client.write_register = AsyncMock(return_value=write_result)
+    client.write_register = AsyncMock(return_value=None)
 
-    ok = await cap.async_write(
-        client, device_id=1, key=COMMAND_MAX_POWER_TARGET, value=watts
-    )
+    ok = await cap.async_write(client, key=COMMAND_MAX_POWER_TARGET, value=watts)
 
     assert ok is True
     client.write_register.assert_awaited_once_with(
-        address=REG_MAX_POWER_TARGET, value=watts, device_id=1
+        address=REG_MAX_POWER_TARGET, value=watts
     )
 
 
@@ -192,54 +184,37 @@ async def test_async_write_rejects_out_of_range_without_touching_the_bus(watts):
     client.write_register = AsyncMock()
 
     with pytest.raises(HeidelbergEnergyControlWriteError):
-        await cap.async_write(
-            client, device_id=1, key=COMMAND_MAX_POWER_TARGET, value=watts
-        )
+        await cap.async_write(client, key=COMMAND_MAX_POWER_TARGET, value=watts)
 
     client.write_register.assert_not_awaited()
 
 
-async def test_async_write_raises_on_modbus_error_response():
+async def test_async_write_raises_on_modbus_error():
     cap = PowerTargetCapability()
     client = MagicMock()
-    write_result = MagicMock()
-    write_result.isError = MagicMock(return_value=True)
-    client.write_register = AsyncMock(return_value=write_result)
+    client.write_register = AsyncMock(side_effect=ModbusError("write refused"))
 
     with pytest.raises(HeidelbergEnergyControlWriteError):
-        await cap.async_write(
-            client, device_id=1, key=COMMAND_MAX_POWER_TARGET, value=4100
-        )
+        await cap.async_write(client, key=COMMAND_MAX_POWER_TARGET, value=4100)
 
 
 async def test_async_write_wraps_modbus_exception():
     cap = PowerTargetCapability()
     client = MagicMock()
-    client.write_register = AsyncMock(side_effect=ModbusException("boom"))
+    client.write_register = AsyncMock(side_effect=ModbusError("boom"))
 
     with pytest.raises(HeidelbergEnergyControlWriteError):
-        await cap.async_write(
-            client, device_id=1, key=COMMAND_MAX_POWER_TARGET, value=4100
-        )
+        await cap.async_write(client, key=COMMAND_MAX_POWER_TARGET, value=4100)
 
 
 # ---------- end-to-end dispatch through the API ----------
 
 
 def _api_with_power_target_loaded() -> tuple[HeidelbergEnergyControlAPI, MagicMock]:
-    api = HeidelbergEnergyControlAPI(host="x", port=502, device_id=1)
-    api._capabilities.append(PowerTargetCapability())
-
     client = MagicMock()
-    client.connected = True
-    client.connect = AsyncMock(return_value=True)
-    client.close = MagicMock()
-
-    write_result = MagicMock()
-    write_result.isError = MagicMock(return_value=False)
-    client.write_register = AsyncMock(return_value=write_result)
-
-    api._client = client
+    client.write_register = AsyncMock(return_value=None)
+    api = HeidelbergEnergyControlAPI(client)
+    api._capabilities.append(PowerTargetCapability())
     return api, client
 
 
@@ -250,7 +225,7 @@ async def test_api_write_command_dispatches_power_target_to_register_500():
 
     assert ok is True
     client.write_register.assert_awaited_once_with(
-        address=REG_MAX_POWER_TARGET, value=4100, device_id=1
+        address=REG_MAX_POWER_TARGET, value=4100
     )
 
 
@@ -265,21 +240,6 @@ def _variant_client(*, has_register_500: bool) -> MagicMock:
     other optional capabilities simply don't load.
     """
     client = MagicMock()
-    client.connected = False
-
-    async def _connect() -> bool:
-        client.connected = True
-        return True
-
-    client.connect = AsyncMock(side_effect=_connect)
-    client.close = MagicMock()
-
-    def _response(registers, is_error=False):
-        rr = MagicMock()
-        rr.isError = MagicMock(return_value=is_error)
-        rr.registers = registers if registers else []
-        return rr
-
     input_reads = {
         (4, 1): [0x202],  # layout 2.0.2
         (100, 2): [16, 6],
@@ -289,22 +249,22 @@ def _variant_client(*, has_register_500: bool) -> MagicMock:
         (5000, 1): [0],
     }
 
-    async def _read_input(address, count, device_id):
+    async def _read_input(address, count):
         registers = input_reads.get((address, count))
         if registers is None:
-            return _response(None, is_error=True)
-        return _response(registers)
+            raise IllegalDataAddressError()
+        return registers
 
-    async def _read_holding(address, count, device_id):
+    async def _read_holding(address, count):
         if address == REG_MAX_POWER_TARGET and count == 1:
             if not has_register_500:
-                return _response(None, is_error=True)
-            return _response([0])
+                raise IllegalDataAddressError()
+            return [0]
         if address == 259 and count == 1:
-            return _response([1])
+            return [1]
         if address == 261 and count == 1:
-            return _response([60])
-        return _response(None, is_error=True)
+            return [60]
+        raise IllegalDataAddressError()
 
     client.read_input_registers = AsyncMock(side_effect=_read_input)
     client.read_holding_registers = AsyncMock(side_effect=_read_holding)
@@ -312,8 +272,7 @@ def _variant_client(*, has_register_500: bool) -> MagicMock:
 
 
 async def test_capability_loads_on_solar_variant_exposing_register_500():
-    api = HeidelbergEnergyControlAPI(host="x", port=502, device_id=1)
-    api._client = _variant_client(has_register_500=True)
+    api = HeidelbergEnergyControlAPI(_variant_client(has_register_500=True))
 
     await api.async_get_static_data()
 
@@ -322,8 +281,7 @@ async def test_capability_loads_on_solar_variant_exposing_register_500():
 
 async def test_capability_skipped_when_only_readback_5000_exists():
     """connect.home at V2.0.2: 5000 is readable, 500 is not — must not load."""
-    api = HeidelbergEnergyControlAPI(host="x", port=502, device_id=1)
-    api._client = _variant_client(has_register_500=False)
+    api = HeidelbergEnergyControlAPI(_variant_client(has_register_500=False))
 
     await api.async_get_static_data()
 
@@ -332,9 +290,8 @@ async def test_capability_skipped_when_only_readback_5000_exists():
 
 async def test_polled_reads_omit_500_and_5000_when_capability_skipped():
     """A skipped capability must keep its registers out of the polled blocks."""
-    api = HeidelbergEnergyControlAPI(host="x", port=502, device_id=1)
     client = _variant_client(has_register_500=False)
-    api._client = client
+    api = HeidelbergEnergyControlAPI(client)
 
     await api.async_get_static_data()
     client.read_holding_registers.reset_mock()

@@ -6,7 +6,7 @@ Three things to pin:
   3. decode_polled maps every field to the right DATA_* key with the
      right unit conversion (deci-amps → A, wire-Wh → kWh, W raw).
   4. Probe returns True only when register 3000 reads back the value 1
-     — a value of 0, an illegal-address response, a ModbusException, or
+     — a value of 0, an illegal-address error, a ModbusError, or
      an OSError all mean "not fitted, skip capability".
 """
 
@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock
 
-from pymodbus.exceptions import ModbusException
+from modbus_connection import IllegalDataAddressError, ModbusError
 
 from custom_components.heidelberg_energy_control.const import (
     DATA_MID_CURRENT_L1,
@@ -152,14 +152,11 @@ def test_decode_polled_ignores_unrelated_addresses():
 async def test_probe_true_when_register_3000_reads_one():
     cap = MidMeterCapability()
     client = MagicMock()
-    ok = MagicMock()
-    ok.isError = MagicMock(return_value=False)
-    ok.registers = [1]
-    client.read_input_registers = AsyncMock(return_value=ok)
+    client.read_input_registers = AsyncMock(return_value=[1])
 
-    assert await cap.async_probe(client, device_id=1) is True
+    assert await cap.async_probe(client) is True
     client.read_input_registers.assert_awaited_once_with(
-        address=REG_MID_AVAILABLE, count=1, device_id=1
+        address=REG_MID_AVAILABLE, count=1
     )
 
 
@@ -167,31 +164,25 @@ async def test_probe_false_when_flag_is_zero():
     """Reg 3000 is mapped and readable but reports 'no MID fitted'."""
     cap = MidMeterCapability()
     client = MagicMock()
-    ok = MagicMock()
-    ok.isError = MagicMock(return_value=False)
-    ok.registers = [0]
-    client.read_input_registers = AsyncMock(return_value=ok)
+    client.read_input_registers = AsyncMock(return_value=[0])
 
-    assert await cap.async_probe(client, device_id=1) is False
+    assert await cap.async_probe(client) is False
 
 
 async def test_probe_false_on_illegal_address_response():
     cap = MidMeterCapability()
     client = MagicMock()
-    err = MagicMock()
-    err.isError = MagicMock(return_value=True)
-    err.registers = []
-    client.read_input_registers = AsyncMock(return_value=err)
+    client.read_input_registers = AsyncMock(side_effect=IllegalDataAddressError())
 
-    assert await cap.async_probe(client, device_id=1) is False
+    assert await cap.async_probe(client) is False
 
 
 async def test_probe_false_on_modbus_exception():
     cap = MidMeterCapability()
     client = MagicMock()
-    client.read_input_registers = AsyncMock(side_effect=ModbusException("boom"))
+    client.read_input_registers = AsyncMock(side_effect=ModbusError("boom"))
 
-    assert await cap.async_probe(client, device_id=1) is False
+    assert await cap.async_probe(client) is False
 
 
 async def test_probe_false_on_oserror():
@@ -199,7 +190,7 @@ async def test_probe_false_on_oserror():
     client = MagicMock()
     client.read_input_registers = AsyncMock(side_effect=OSError("network down"))
 
-    assert await cap.async_probe(client, device_id=1) is False
+    assert await cap.async_probe(client) is False
 
 
 # ---------- capability owns no writes ----------

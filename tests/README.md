@@ -40,7 +40,7 @@ Python 3.13+ recommended (matches the CI workflow). The venv lives at the repo r
 | `test_api_decoding.py` | Modbus wire-format: raw register lists → `async_get_data()` / `async_get_static_data()` dicts. Parametrized across all captured fixtures. |
 | `test_coordinator_virtual.py` | The bidirectional sync between the virtual enable switch, virtual target current slider, and hardware register 261. Includes empty-response tolerance. |
 | `test_coordinator_is_supported.py` | Firmware-version gating semantics (fail-open on missing/unparseable versions, `>=` comparison, virtual-logic gate at v1.0.7). |
-| `conftest.py` | `load_fixture()`, `build_mock_modbus_client()`, and the `mock_api` fixture used by coordinator tests. |
+| `conftest.py` | `load_fixture()`, `build_mock_modbus_unit()`, and the `mock_api` fixture used by coordinator tests. |
 | `fixtures/wallbox_*.json` | Captured register values from real or synthetic wallboxes. |
 
 ## Fixtures and variants
@@ -74,8 +74,8 @@ To add a third (e.g. a v1.0.8 device, or a v2.0.4 capture during active charging
 
 ## Known gotchas
 
-- **pymodbus 3.x requires a running event loop at `AsyncModbusTcpClient.__init__()` time.** That's why pure-function tests in `test_api_decoding.py` are declared `async` even though they only call static-style helpers — pytest-asyncio's loop must be active for the constructor to succeed. If you add a sync test that instantiates the API class, it will fail with `RuntimeError: no running event loop`. Make it `async` or construct the client lazily.
+- **The integration receives a `ModbusUnit` from Home Assistant.** API tests should mock its list-returning `read_*_registers` methods, exception-based errors, and `require_timeout`; they should not create or close a Modbus client themselves.
 
-- **The `mock_api` fixture in `conftest.py` does not implement the Modbus wire protocol.** It's a `MagicMock` whose `async_get_data` and `async_write_register` are `AsyncMock`s. Coordinator tests configure return values per case. For tests that need the real API class with a mock client (e.g. wire-format decoding), use the `_make_api(fixture_name)` helper in `test_api_decoding.py`.
+- **The `mock_api` fixture in `conftest.py` does not implement the Modbus wire protocol.** It's a `MagicMock` whose `async_get_data` and `async_write_command` are `AsyncMock`s. Coordinator tests configure return values per case. For tests that need the real API class with a mock unit, use the `_make_api(fixture_name)` helper in `test_api_decoding.py`.
 
-- **`mock_modbus_client` returns an error response for any read it wasn't preconfigured for.** This is intentional — silently returning empty data would let tests pass against accidental register accesses that don't exist on the fixture. If a new register is read in `core/api.py`, the corresponding entry must be added to `build_mock_modbus_client` in `conftest.py`.
+- **`build_mock_modbus_unit` raises an illegal-address error for any read it wasn't preconfigured for.** This is intentional; silently returning empty data could let tests pass after an accidental register access. If a new register is read in `core/api.py`, add it to the fixture mapping in `conftest.py`.

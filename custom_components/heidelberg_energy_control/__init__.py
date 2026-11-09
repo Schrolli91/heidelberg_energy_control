@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import logging
-
+from modbus_connection import ModbusTcpParams
+from homeassistant.components.modbus import async_get_unit
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
@@ -15,8 +15,6 @@ from .core.exceptions import (
     HeidelbergEnergyControlConnectionError,
     HeidelbergEnergyControlReadError,
 )
-
-# _LOGGER = logging.getLogger(__name__)
 
 type HeidelbergEnergyControlConfigEntry = ConfigEntry[
     HeidelbergEnergyControlCoordinator
@@ -30,16 +28,17 @@ async def async_setup_entry(
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
-    api = HeidelbergEnergyControlAPI(
-        host=entry.data["host"],
-        port=entry.data["port"],
-        device_id=entry.data["device_id"],
+    unit = async_get_unit(
+        hass,
+        entry,
+        ModbusTcpParams(host=entry.data["host"], port=entry.data["port"]),
+        entry.data["device_id"],
     )
+    api = HeidelbergEnergyControlAPI(unit)
 
     try:
         static_data = await api.async_get_static_data()
         if static_data is None:
-            await api.disconnect()
             raise ConfigEntryNotReady(
                 "Wallbox connected but did not respond to requests"
             )
@@ -47,7 +46,6 @@ async def async_setup_entry(
     except HeidelbergEnergyControlConnectionError as err:
         raise ConfigEntryNotReady(f"Unable to connect to wallbox: {err}") from err
     except HeidelbergEnergyControlReadError as err:
-        await api.disconnect()
         raise ConfigEntryNotReady(f"Failed to read static data: {err}") from err
     except Exception as err:
         raise ConfigEntryNotReady(f"Error communicating with wallbox: {err}") from err
@@ -67,7 +65,8 @@ async def async_unload_entry(
     hass: HomeAssistant, entry: HeidelbergEnergyControlConfigEntry
 ) -> bool:
     """Unload a config entry."""
-    await entry.runtime_data.api.disconnect()
+    # async_get_unit() releases the integration's hold through the unload
+    # callback registered on the config entry.
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 

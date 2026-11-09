@@ -7,6 +7,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from modbus_connection import IllegalDataAddressError
 
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -26,22 +27,15 @@ def load_fixture(name: str) -> dict[str, list[int]]:
     return json.loads((FIXTURES_DIR / f"{name}.json").read_text())
 
 
-def build_mock_modbus_client(fixture: dict[str, list[int]]) -> MagicMock:
-    """Build an AsyncModbusTcpClient mock that serves the given fixture.
+def build_mock_modbus_unit(fixture: dict[str, list[int]]) -> MagicMock:
+    """Build a ModbusUnit mock that serves the given fixture.
 
     Maps (address, count) for both input and holding reads to the recorded
-    register lists. Unknown reads return an error response so tests fail
+    register lists. Unknown reads raise an illegal-address error so tests fail
     loudly on un-recorded register accesses.
     """
     client = MagicMock()
     client.connected = False
-
-    async def _connect() -> bool:
-        client.connected = True
-        return True
-
-    client.connect = AsyncMock(side_effect=_connect)
-    client.close = MagicMock(side_effect=lambda: setattr(client, "connected", False))
 
     # Flatten each fixture block into a {address: value} map. The API's
     # block-merging read path can request any window over these addresses;
@@ -81,24 +75,20 @@ def build_mock_modbus_client(fixture: dict[str, list[int]]) -> MagicMock:
             return None
         return window
 
-    def _response(registers: list[int] | None):
-        rr = MagicMock()
+    async def _read_input(address, count):
+        registers = _slice(input_map, address, count)
         if registers is None:
-            rr.isError = MagicMock(return_value=True)
-            rr.registers = []
-        else:
-            rr.isError = MagicMock(return_value=False)
-            rr.registers = registers
-        return rr
+            raise IllegalDataAddressError()
+        return registers
 
-    async def _read_input(address, count, device_id):
-        return _response(_slice(input_map, address, count))
+    async def _read_holding(address, count):
+        registers = _slice(holding_map, address, count)
+        if registers is None:
+            raise IllegalDataAddressError()
+        return registers
 
-    async def _read_holding(address, count, device_id):
-        return _response(_slice(holding_map, address, count))
-
-    async def _write_register(address, value, device_id):
-        return _response([value])
+    async def _write_register(address, value):
+        return None
 
     client.read_input_registers = AsyncMock(side_effect=_read_input)
     client.read_holding_registers = AsyncMock(side_effect=_read_holding)
